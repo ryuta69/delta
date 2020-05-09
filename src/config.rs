@@ -78,54 +78,17 @@ pub fn get_config<'a>(
         theme_set,
     );
 
+    let (
+        minus_style_modifier,
+        minus_emph_style_modifier,
+        plus_style_modifier,
+        plus_emph_style_modifier,
+    ) = make_style_modifiers(opt, is_light_mode, true_color);
+
     let theme = if style::is_no_syntax_highlighting_theme_name(&theme_name) {
         None
     } else {
         Some(&theme_set.themes[&theme_name])
-    };
-
-    let minus_style_modifier = StyleModifier {
-        background: Some(color_from_rgb_or_ansi_code_with_default(
-            opt.minus_color.as_ref(),
-            style::get_minus_color_default(is_light_mode, true_color),
-        )),
-        foreground: if opt.highlight_removed {
-            None
-        } else {
-            Some(style::NO_COLOR)
-        },
-        font_style: None,
-    };
-
-    let minus_emph_style_modifier = StyleModifier {
-        background: Some(color_from_rgb_or_ansi_code_with_default(
-            opt.minus_emph_color.as_ref(),
-            style::get_minus_emph_color_default(is_light_mode, true_color),
-        )),
-        foreground: if opt.highlight_removed {
-            None
-        } else {
-            Some(style::NO_COLOR)
-        },
-        font_style: None,
-    };
-
-    let plus_style_modifier = StyleModifier {
-        background: Some(color_from_rgb_or_ansi_code_with_default(
-            opt.plus_color.as_ref(),
-            style::get_plus_color_default(is_light_mode, true_color),
-        )),
-        foreground: None,
-        font_style: None,
-    };
-
-    let plus_emph_style_modifier = StyleModifier {
-        background: Some(color_from_rgb_or_ansi_code_with_default(
-            opt.plus_emph_color.as_ref(),
-            style::get_plus_emph_color_default(is_light_mode, true_color),
-        )),
-        foreground: None,
-        font_style: None,
     };
 
     let minus_line_marker = if keep_plus_minus_markers { "-" } else { " " };
@@ -218,6 +181,62 @@ fn valid_theme_name_or_none(theme_name: Option<&String>, theme_set: &ThemeSet) -
         }
         _ => None,
     }
+}
+
+fn make_style_modifiers<'a>(
+    opt: &'a cli::Opt,
+    is_light_mode: bool,
+    true_color: bool,
+) -> (StyleModifier, StyleModifier, StyleModifier, StyleModifier) {
+    let minus_background_style_modifier = StyleModifier {
+        background: Some(color_from_rgb_or_ansi_code_with_default(
+            opt.minus_color.as_ref(),
+            style::get_minus_color_default(is_light_mode, true_color),
+        )),
+        foreground: if opt.highlight_removed {
+            None
+        } else {
+            Some(style::NO_COLOR)
+        },
+        font_style: None,
+    };
+
+    let minus_background_emph_style_modifier = StyleModifier {
+        background: Some(color_from_rgb_or_ansi_code_with_default(
+            opt.minus_emph_color.as_ref(),
+            style::get_minus_emph_color_default(is_light_mode, true_color),
+        )),
+        foreground: if opt.highlight_removed {
+            None
+        } else {
+            Some(style::NO_COLOR)
+        },
+        font_style: None,
+    };
+
+    let plus_background_style_modifier = StyleModifier {
+        background: Some(color_from_rgb_or_ansi_code_with_default(
+            opt.plus_color.as_ref(),
+            style::get_plus_color_default(is_light_mode, true_color),
+        )),
+        foreground: None,
+        font_style: None,
+    };
+
+    let plus_background_emph_style_modifier = StyleModifier {
+        background: Some(color_from_rgb_or_ansi_code_with_default(
+            opt.plus_emph_color.as_ref(),
+            style::get_plus_emph_color_default(is_light_mode, true_color),
+        )),
+        foreground: None,
+        font_style: None,
+    };
+    (
+        minus_background_style_modifier,
+        minus_background_emph_style_modifier,
+        plus_background_style_modifier,
+        plus_background_emph_style_modifier,
+    )
 }
 
 fn color_from_rgb_or_ansi_code(s: &str) -> Color {
