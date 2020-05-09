@@ -63,13 +63,18 @@ impl<'a> Painter<'a> {
     }
 
     pub fn paint_buffered_lines(&mut self) {
-        let (minus_line_syntax_style_sections, plus_line_syntax_style_sections) =
-            Self::get_syntax_style_sections(
-                &self.minus_lines,
-                &self.plus_lines,
-                &mut self.highlighter,
-                self.config,
-            );
+        let minus_line_syntax_style_sections = Self::get_syntax_style_sections_for_lines(
+            &self.minus_lines,
+            &mut self.highlighter,
+            self.config.highlight_removed,
+            self.config,
+        );
+        let plus_line_syntax_style_sections = Self::get_syntax_style_sections_for_lines(
+            &self.plus_lines,
+            &mut self.highlighter,
+            true,
+            self.config,
+        );
         let (minus_line_diff_style_sections, plus_line_diff_style_sections) =
             Self::get_diff_style_sections(&self.minus_lines, &self.plus_lines, self.config);
         // TODO: lines and style sections contain identical line text
@@ -161,32 +166,22 @@ impl<'a> Painter<'a> {
         Ok(())
     }
 
-    /// Perform syntax highlighting for minus and plus lines in buffer.
-    fn get_syntax_style_sections<'m, 'p>(
-        minus_lines: &'m [String],
-        plus_lines: &'p [String],
+    fn get_syntax_style_sections_for_lines<'s>(
+        lines: &'s [String],
         highlighter: &mut HighlightLines,
+        should_syntax_highlight: bool,
         config: &config::Config,
-    ) -> (Vec<Vec<(Style, &'m str)>>, Vec<Vec<(Style, &'p str)>>) {
-        let mut minus_line_sections = Vec::new();
-        for line in minus_lines.iter() {
-            minus_line_sections.push(Painter::get_line_syntax_style_sections(
+    ) -> Vec<Vec<(Style, &'s str)>> {
+        let mut line_sections = Vec::new();
+        for line in lines.iter() {
+            line_sections.push(Painter::get_line_syntax_style_sections(
                 &line,
                 highlighter,
                 &config,
-                config.highlight_removed,
+                should_syntax_highlight,
             ));
         }
-        let mut plus_line_sections = Vec::new();
-        for line in plus_lines.iter() {
-            plus_line_sections.push(Painter::get_line_syntax_style_sections(
-                &line,
-                highlighter,
-                &config,
-                true,
-            ));
-        }
-        (minus_line_sections, plus_line_sections)
+        line_sections
     }
 
     pub fn get_line_syntax_style_sections(
