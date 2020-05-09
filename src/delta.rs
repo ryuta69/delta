@@ -262,8 +262,8 @@ fn handle_hunk_meta_line(
         let syntax_style_sections = Painter::get_line_syntax_style_sections(
             &code_fragment,
             &mut painter.highlighter,
+            None,
             &painter.config,
-            true,
         );
         Painter::paint_lines(
             vec![syntax_style_sections],
@@ -336,8 +336,8 @@ fn handle_hunk_line(
             let syntax_style_sections = Painter::get_line_syntax_style_sections(
                 &line,
                 &mut painter.highlighter,
+                None,
                 &painter.config,
-                true,
             );
             Painter::paint_lines(
                 vec![syntax_style_sections],
@@ -652,12 +652,17 @@ mod tests {
             dark: false,
             minus_color: None,
             minus_emph_color: None,
+            minus_foreground_color: None,
+            minus_emph_foreground_color: None,
             plus_color: None,
             plus_emph_color: None,
+            plus_foreground_color: None,
+            plus_emph_foreground_color: None,
             color_only: false,
             keep_plus_minus_markers: false,
             theme: None,
-            highlight_removed: false,
+            lines_to_be_syntax_highlighted: "0+".to_string(),
+            highlight_minus_lines: false,
             commit_style: cli::SectionStyle::Plain,
             commit_color: "Yellow".to_string(),
             file_style: cli::SectionStyle::Underline,
