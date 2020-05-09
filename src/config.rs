@@ -15,8 +15,10 @@ pub struct Config<'a> {
     pub theme_name: String,
     pub max_line_distance: f64,
     pub max_line_distance_for_naively_paired_lines: f64,
+    pub minus_foreground_style_modifier: Option<StyleModifier>,
     pub minus_style_modifier: StyleModifier,
     pub minus_emph_style_modifier: StyleModifier,
+    pub plus_foreground_style_modifier: Option<StyleModifier>,
     pub plus_style_modifier: StyleModifier,
     pub plus_emph_style_modifier: StyleModifier,
     pub minus_line_marker: &'a str,
@@ -79,8 +81,10 @@ pub fn get_config<'a>(
     );
 
     let (
+        minus_foreground_style_modifier,
         minus_style_modifier,
         minus_emph_style_modifier,
+        plus_foreground_style_modifier,
         plus_style_modifier,
         plus_emph_style_modifier,
     ) = make_style_modifiers(opt, is_light_mode, true_color);
@@ -104,8 +108,10 @@ pub fn get_config<'a>(
         theme_name,
         max_line_distance: opt.max_line_distance,
         max_line_distance_for_naively_paired_lines,
+        minus_foreground_style_modifier: None,
         minus_style_modifier,
         minus_emph_style_modifier,
+        plus_foreground_style_modifier: None,
         plus_style_modifier,
         plus_emph_style_modifier,
         highlight_removed: opt.highlight_removed,
@@ -187,7 +193,14 @@ fn make_style_modifiers<'a>(
     opt: &'a cli::Opt,
     is_light_mode: bool,
     true_color: bool,
-) -> (StyleModifier, StyleModifier, StyleModifier, StyleModifier) {
+) -> (
+    StyleModifier,
+    StyleModifier,
+    StyleModifier,
+    StyleModifier,
+    StyleModifier,
+    StyleModifier,
+) {
     let minus_background_style_modifier = StyleModifier {
         background: Some(color_from_rgb_or_ansi_code_with_default(
             opt.minus_color.as_ref(),
@@ -198,6 +211,19 @@ fn make_style_modifiers<'a>(
         } else {
             Some(style::NO_COLOR)
         },
+        font_style: None,
+    };
+
+    let minus_foreground_style_modifier = StyleModifier {
+        background: if opt.highlight_removed {
+            None
+        } else {
+            Some(style::NO_COLOR)
+        },
+        foreground: Some(color_from_rgb_or_ansi_code_with_default(
+            opt.minus_color.as_ref(),
+            style::get_minus_color_default(is_light_mode, true_color),
+        )),
         font_style: None,
     };
 
@@ -223,6 +249,15 @@ fn make_style_modifiers<'a>(
         font_style: None,
     };
 
+    let plus_foreground_style_modifier = StyleModifier {
+        background: None,
+        foreground: Some(color_from_rgb_or_ansi_code_with_default(
+            opt.plus_color.as_ref(),
+            style::get_plus_color_default(is_light_mode, true_color),
+        )),
+        font_style: None,
+    };
+
     let plus_background_emph_style_modifier = StyleModifier {
         background: Some(color_from_rgb_or_ansi_code_with_default(
             opt.plus_emph_color.as_ref(),
@@ -232,8 +267,10 @@ fn make_style_modifiers<'a>(
         font_style: None,
     };
     (
+        minus_foreground_style_modifier,
         minus_background_style_modifier,
         minus_background_emph_style_modifier,
+        plus_foreground_style_modifier,
         plus_background_style_modifier,
         plus_background_emph_style_modifier,
     )

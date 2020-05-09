@@ -252,8 +252,8 @@ fn handle_hunk_meta_line(
         let syntax_style_sections = Painter::get_line_syntax_style_sections(
             &code_fragment,
             &mut painter.highlighter,
+            None,
             &painter.config,
-            true,
         );
         Painter::paint_lines(
             vec![syntax_style_sections],
@@ -326,8 +326,8 @@ fn handle_hunk_line(
             let syntax_style_sections = Painter::get_line_syntax_style_sections(
                 &line,
                 &mut painter.highlighter,
+                None,
                 &painter.config,
-                true,
             );
             Painter::paint_lines(
                 vec![syntax_style_sections],
