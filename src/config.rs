@@ -81,12 +81,12 @@ pub fn get_config<'a>(
     );
 
     let (
-        minus_foreground_style_modifier,
         minus_style_modifier,
-        minus_emph_style_modifier,
-        plus_foreground_style_modifier,
         plus_style_modifier,
+        minus_emph_style_modifier,
         plus_emph_style_modifier,
+        minus_foreground_style_modifier,
+        plus_foreground_style_modifier,
     ) = make_style_modifiers(opt, is_light_mode, true_color);
 
     let theme = if style::is_no_syntax_highlighting_theme_name(&theme_name) {
@@ -108,10 +108,10 @@ pub fn get_config<'a>(
         theme_name,
         max_line_distance: opt.max_line_distance,
         max_line_distance_for_naively_paired_lines,
-        minus_foreground_style_modifier: None,
+        minus_foreground_style_modifier,
         minus_style_modifier,
         minus_emph_style_modifier,
-        plus_foreground_style_modifier: None,
+        plus_foreground_style_modifier,
         plus_style_modifier,
         plus_emph_style_modifier,
         highlight_removed: opt.highlight_removed,
@@ -198,39 +198,14 @@ fn make_style_modifiers<'a>(
     StyleModifier,
     StyleModifier,
     StyleModifier,
-    StyleModifier,
-    StyleModifier,
+    Option<StyleModifier>,
+    Option<StyleModifier>,
 ) {
+    // Background styles
     let minus_background_style_modifier = StyleModifier {
         background: Some(color_from_rgb_or_ansi_code_with_default(
             opt.minus_color.as_ref(),
             style::get_minus_color_default(is_light_mode, true_color),
-        )),
-        foreground: if opt.highlight_removed {
-            None
-        } else {
-            Some(style::NO_COLOR)
-        },
-        font_style: None,
-    };
-
-    let minus_foreground_style_modifier = StyleModifier {
-        background: if opt.highlight_removed {
-            None
-        } else {
-            Some(style::NO_COLOR)
-        },
-        foreground: Some(color_from_rgb_or_ansi_code_with_default(
-            opt.minus_color.as_ref(),
-            style::get_minus_color_default(is_light_mode, true_color),
-        )),
-        font_style: None,
-    };
-
-    let minus_background_emph_style_modifier = StyleModifier {
-        background: Some(color_from_rgb_or_ansi_code_with_default(
-            opt.minus_emph_color.as_ref(),
-            style::get_minus_emph_color_default(is_light_mode, true_color),
         )),
         foreground: if opt.highlight_removed {
             None
@@ -249,12 +224,17 @@ fn make_style_modifiers<'a>(
         font_style: None,
     };
 
-    let plus_foreground_style_modifier = StyleModifier {
-        background: None,
-        foreground: Some(color_from_rgb_or_ansi_code_with_default(
-            opt.plus_color.as_ref(),
-            style::get_plus_color_default(is_light_mode, true_color),
+    // Background emph styles
+    let minus_background_emph_style_modifier = StyleModifier {
+        background: Some(color_from_rgb_or_ansi_code_with_default(
+            opt.minus_emph_color.as_ref(),
+            style::get_minus_emph_color_default(is_light_mode, true_color),
         )),
+        foreground: if opt.highlight_removed {
+            None
+        } else {
+            Some(style::NO_COLOR)
+        },
         font_style: None,
     };
 
@@ -266,13 +246,39 @@ fn make_style_modifiers<'a>(
         foreground: None,
         font_style: None,
     };
+
+    // Foreground styles (these replace syntax highlighting).
+    let minus_foreground_style_modifier = match opt.minus_foreground_color.is_some() {
+        true => Some(StyleModifier {
+            background: None,
+            foreground: Some(color_from_rgb_or_ansi_code_with_default(
+                opt.minus_foreground_color.as_ref(),
+                style::get_minus_emph_color_default(is_light_mode, true_color),
+            )),
+            font_style: None,
+        }),
+        false => None,
+    };
+
+    let plus_foreground_style_modifier = match opt.plus_foreground_color.is_some() {
+        true => Some(StyleModifier {
+            background: None,
+            foreground: Some(color_from_rgb_or_ansi_code_with_default(
+                opt.plus_foreground_color.as_ref(),
+                style::get_plus_emph_color_default(is_light_mode, true_color),
+            )),
+            font_style: None,
+        }),
+        false => None,
+    };
+
     (
-        minus_foreground_style_modifier,
         minus_background_style_modifier,
-        minus_background_emph_style_modifier,
-        plus_foreground_style_modifier,
         plus_background_style_modifier,
+        minus_background_emph_style_modifier,
         plus_background_emph_style_modifier,
+        minus_foreground_style_modifier,
+        plus_foreground_style_modifier,
     )
 }
 
