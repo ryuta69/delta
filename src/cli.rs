@@ -94,7 +94,7 @@ pub struct Opt {
     #[structopt(long = "highlight-removed")]
     /// Apply syntax highlighting to removed lines. The default is to
     /// apply syntax highlighting to unchanged and new lines only.
-    pub highlight_removed: bool,
+    pub highlight_minus_lines: bool,
 
     #[structopt(long = "color-only")]
     /// Do not alter the input in any way other than applying colors. Equivalent to

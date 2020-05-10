@@ -65,7 +65,7 @@ impl<'a> Painter<'a> {
     pub fn paint_buffered_lines(&mut self) {
         let minus_fixed_foreground_style = self.get_fixed_foreground_style(
             self.config.minus_foreground_style_modifier,
-            self.config.highlight_removed,
+            self.config.highlight_minus_lines,
         );
         let plus_fixed_foreground_style =
             self.get_fixed_foreground_style(self.config.plus_foreground_style_modifier, true);

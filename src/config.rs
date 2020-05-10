@@ -23,7 +23,7 @@ pub struct Config<'a> {
     pub plus_emph_style_modifier: StyleModifier,
     pub minus_line_marker: &'a str,
     pub plus_line_marker: &'a str,
-    pub highlight_removed: bool,
+    pub highlight_minus_lines: bool,
     pub commit_style: cli::SectionStyle,
     pub commit_color: Color,
     pub file_style: cli::SectionStyle,
@@ -114,7 +114,7 @@ pub fn get_config<'a>(
         plus_foreground_style_modifier,
         plus_style_modifier,
         plus_emph_style_modifier,
-        highlight_removed: opt.highlight_removed,
+        highlight_minus_lines: opt.highlight_minus_lines,
         minus_line_marker,
         plus_line_marker,
         commit_style,
@@ -207,7 +207,7 @@ fn make_style_modifiers<'a>(
             opt.minus_color.as_ref(),
             style::get_minus_color_default(is_light_mode, true_color),
         )),
-        foreground: if opt.highlight_removed {
+        foreground: if opt.highlight_minus_lines {
             None
         } else {
             Some(style::NO_COLOR)
@@ -230,7 +230,7 @@ fn make_style_modifiers<'a>(
             opt.minus_emph_color.as_ref(),
             style::get_minus_emph_color_default(is_light_mode, true_color),
         )),
-        foreground: if opt.highlight_removed {
+        foreground: if opt.highlight_minus_lines {
             None
         } else {
             Some(style::NO_COLOR)

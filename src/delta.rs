@@ -646,7 +646,7 @@ mod tests {
             color_only: false,
             keep_plus_minus_markers: false,
             theme: None,
-            highlight_removed: false,
+            highlight_minus_lines: false,
             commit_style: cli::SectionStyle::Plain,
             commit_color: "Yellow".to_string(),
             file_style: cli::SectionStyle::Underline,
