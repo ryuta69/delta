@@ -38,6 +38,7 @@ pub struct Config<'a> {
     pub no_style: Style,
     pub max_buffered_lines: usize,
     pub paging_mode: PagingMode,
+    pub dsf: bool,
 }
 
 pub fn get_config<'a>(
@@ -131,6 +132,7 @@ pub fn get_config<'a>(
         no_style: style::get_no_style(),
         max_buffered_lines: 32,
         paging_mode,
+        dsf: opt.dsf,
     }
 }
 
@@ -203,11 +205,14 @@ fn make_style_modifiers<'a>(
 ) {
     // Background styles
     let minus_background_style_modifier = StyleModifier {
-        background: Some(color_from_rgb_or_ansi_code_with_default(
-            opt.minus_color.as_ref(),
-            style::get_minus_color_default(is_light_mode, true_color),
-        )),
-        foreground: if opt.highlight_minus_lines {
+        background: match opt.dsf {
+            false => Some(color_from_rgb_or_ansi_code_with_default(
+                opt.minus_color.as_ref(),
+                style::get_minus_color_default(is_light_mode, true_color),
+            )),
+            true => None,
+        },
+        foreground: if opt.dsf || opt.highlight_minus_lines {
             None
         } else {
             Some(style::NO_COLOR)
@@ -216,10 +221,13 @@ fn make_style_modifiers<'a>(
     };
 
     let plus_background_style_modifier = StyleModifier {
-        background: Some(color_from_rgb_or_ansi_code_with_default(
-            opt.plus_color.as_ref(),
-            style::get_plus_color_default(is_light_mode, true_color),
-        )),
+        background: match opt.dsf {
+            false => Some(color_from_rgb_or_ansi_code_with_default(
+                opt.plus_color.as_ref(),
+                style::get_plus_color_default(is_light_mode, true_color),
+            )),
+            true => None,
+        },
         foreground: None,
         font_style: None,
     };
@@ -230,7 +238,7 @@ fn make_style_modifiers<'a>(
             opt.minus_emph_color.as_ref(),
             style::get_minus_emph_color_default(is_light_mode, true_color),
         )),
-        foreground: if opt.highlight_minus_lines {
+        foreground: if opt.dsf || opt.highlight_minus_lines {
             None
         } else {
             Some(style::NO_COLOR)
@@ -248,7 +256,7 @@ fn make_style_modifiers<'a>(
     };
 
     // Foreground styles (these replace syntax highlighting).
-    let minus_foreground_style_modifier = match opt.minus_foreground_color.is_some() {
+    let minus_foreground_style_modifier = match opt.dsf || opt.minus_foreground_color.is_some() {
         true => Some(StyleModifier {
             background: None,
             foreground: Some(color_from_rgb_or_ansi_code_with_default(
@@ -260,7 +268,7 @@ fn make_style_modifiers<'a>(
         false => None,
     };
 
-    let plus_foreground_style_modifier = match opt.plus_foreground_color.is_some() {
+    let plus_foreground_style_modifier = match opt.dsf || opt.plus_foreground_color.is_some() {
         true => Some(StyleModifier {
             background: None,
             foreground: Some(color_from_rgb_or_ansi_code_with_default(

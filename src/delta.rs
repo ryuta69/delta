@@ -326,7 +326,11 @@ fn handle_hunk_line(
             let syntax_style_sections = Painter::get_line_syntax_style_sections(
                 &line,
                 &mut painter.highlighter,
-                None,
+                if config.dsf {
+                    Some(config.no_style)
+                } else {
+                    None
+                },
                 &painter.config,
             );
             Painter::paint_lines(

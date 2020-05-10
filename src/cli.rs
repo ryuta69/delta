@@ -99,6 +99,10 @@ pub struct Opt {
     /// Disable syntax highlighting and instead use this foreground color for emphasized sections of added lines.
     pub plus_emph_foreground_color: Option<String>,
 
+    #[structopt(long = "dsf")]
+    /// Emulate diff-so-fancy (https://github.com/so-fancy/diff-so-fancy)
+    pub dsf: bool,
+
     #[structopt(long = "theme", env = "BAT_THEME")]
     /// The code syntax highlighting theme to use. Use --theme=none to disable syntax highlighting.
     /// If the theme is not set using this option, it will be taken from the BAT_THEME environment
