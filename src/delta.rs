@@ -50,14 +50,14 @@ impl State {
 // | HunkMinus   | flush, emit | flush, emit | flush, emit | flush, emit | push        | push     |
 // | HunkPlus    | flush, emit | flush, emit | flush, emit | flush, emit | flush, push | push     |
 
-pub fn delta<I>(
+pub fn delta<'a, I>(
     lines: I,
     config: &Config,
     assets: &HighlightingAssets,
     writer: &mut dyn Write,
 ) -> std::io::Result<()>
 where
-    I: Iterator<Item = String>,
+    I: Iterator<Item = &'a [u8]>,
 {
     let mut painter = Painter::new(writer, config, assets);
     let mut minus_file = "".to_string();
@@ -65,7 +65,8 @@ where
     let mut state = State::Unknown;
     let mut source = Source::Unknown;
 
-    for raw_line in lines {
+    while let Some(raw_line_bytes) = lines.next() {
+        let raw_line = String::from_utf8_lossy(raw_line_bytes);
         let line = strip_ansi_codes(&raw_line).to_string();
         if source == Source::Unknown {
             source = detect_source(&line);
