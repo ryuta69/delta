@@ -51,7 +51,7 @@ impl State {
 // | HunkPlus    | flush, emit | flush, emit | flush, emit | flush, emit | flush, push | push     |
 
 pub fn delta<I>(
-    lines: I,
+    mut lines: I,
     config: &Config,
     assets: &HighlightingAssets,
     writer: &mut dyn Write,
@@ -65,11 +65,12 @@ where
     let mut state = State::Unknown;
     let mut source = Source::Unknown;
 
-    while let Some(raw_line_bytes) = lines.next() {
-        if raw_line_bytes.is_err() {
+    while let Some(raw_line_bytes_result) = lines.next() {
+        if raw_line_bytes_result.is_err() {
             break;
         }
-        let raw_line = String::from_utf8_lossy(&raw_line_bytes.unwrap());
+        let raw_line_bytes = raw_line_bytes_result.unwrap();
+        let raw_line = String::from_utf8_lossy(&raw_line_bytes);
         let line = strip_ansi_codes(&raw_line).to_string();
         if source == Source::Unknown {
             source = detect_source(&line);
@@ -637,7 +638,7 @@ mod tests {
         let config = cli::process_command_line_arguments(&assets, &options);
 
         delta(
-            input.split("\n").map(String::from), //
+            input.split("\n").map(|s| Ok(s.as_bytes().to_vec())),
             &config,
             &assets,
             &mut writer,
