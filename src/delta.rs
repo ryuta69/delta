@@ -66,10 +66,7 @@ where
     let mut source = Source::Unknown;
 
     while let Some(raw_line_bytes_result) = lines.next() {
-        if raw_line_bytes_result.is_err() {
-            break;
-        }
-        let raw_line_bytes = raw_line_bytes_result.unwrap();
+        let raw_line_bytes = raw_line_bytes_result?;
         let raw_line = String::from_utf8_lossy(&raw_line_bytes);
         let line = strip_ansi_codes(&raw_line).to_string();
         if source == Source::Unknown {
