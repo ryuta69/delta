@@ -63,7 +63,7 @@ fn main() -> std::io::Result<()> {
     let mut writer = output_type.handle().unwrap();
 
     if let Err(error) = delta(
-        io::stdin().lock().byte_lines(),
+        io::stdin().lock().byte_lines_iter(),
         &config,
         &assets,
         &mut writer,
