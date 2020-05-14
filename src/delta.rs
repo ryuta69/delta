@@ -52,12 +52,15 @@ impl State {
 // | HunkMinus   | flush, emit | flush, emit | flush, emit | flush, emit | push        | push     |
 // | HunkPlus    | flush, emit | flush, emit | flush, emit | flush, emit | flush, push | push     |
 
-pub fn delta(
-    lines: ByteLines<StdinLock>,
+pub fn delta<'a, I>(
+    lines: I,
     config: &Config,
     assets: &HighlightingAssets,
     writer: &mut dyn Write,
-) -> std::io::Result<()> {
+) -> std::io::Result<()>
+where
+    I: Iterator<Item = Option<std::io::Result<&'a [u8]>>>,
+{
     let mut painter = Painter::new(writer, config, assets);
     let mut minus_file = "".to_string();
     let mut plus_file;
