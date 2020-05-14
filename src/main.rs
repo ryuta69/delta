@@ -13,11 +13,12 @@ mod paint;
 mod parse;
 mod style;
 
-use std::io::{self, BufRead, ErrorKind, Read, Write};
+use std::io::{self, ErrorKind, Read, Write};
 use std::process;
 
 use ansi_term;
 use atty;
+use bytelines::ByteLinesReader;
 use structopt::StructOpt;
 use syntect::highlighting::{Color, FontStyle, Style};
 
@@ -62,10 +63,7 @@ fn main() -> std::io::Result<()> {
     let mut writer = output_type.handle().unwrap();
 
     if let Err(error) = delta(
-        io::stdin()
-            .lock()
-            .lines()
-            .map(|l| l.unwrap_or_else(|_| "<delta: invalid utf-8 data>".to_string())),
+        io::stdin().lock().byte_lines(),
         &config,
         &assets,
         &mut writer,

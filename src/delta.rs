@@ -1,6 +1,7 @@
 use std::io::Write;
 
 use console::strip_ansi_codes;
+use std::io::StdinLock;
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::bat::assets::HighlightingAssets;
@@ -10,6 +11,7 @@ use crate::draw;
 use crate::paint::{self, Painter};
 use crate::parse;
 use crate::style;
+use bytelines::ByteLines;
 
 #[derive(Debug, PartialEq)]
 pub enum State {
@@ -50,15 +52,12 @@ impl State {
 // | HunkMinus   | flush, emit | flush, emit | flush, emit | flush, emit | push        | push     |
 // | HunkPlus    | flush, emit | flush, emit | flush, emit | flush, emit | flush, push | push     |
 
-pub fn delta<'a, I>(
-    lines: I,
+pub fn delta(
+    lines: ByteLines<StdinLock>,
     config: &Config,
     assets: &HighlightingAssets,
     writer: &mut dyn Write,
-) -> std::io::Result<()>
-where
-    I: Iterator<Item = &'a [u8]>,
-{
+) -> std::io::Result<()> {
     let mut painter = Painter::new(writer, config, assets);
     let mut minus_file = "".to_string();
     let mut plus_file;
@@ -66,7 +65,10 @@ where
     let mut source = Source::Unknown;
 
     while let Some(raw_line_bytes) = lines.next() {
-        let raw_line = String::from_utf8_lossy(raw_line_bytes);
+        if raw_line_bytes.is_err() {
+            break;
+        }
+        let raw_line = String::from_utf8_lossy(raw_line_bytes.unwrap());
         let line = strip_ansi_codes(&raw_line).to_string();
         if source == Source::Unknown {
             source = detect_source(&line);
@@ -634,7 +636,7 @@ mod tests {
         let config = cli::process_command_line_arguments(&assets, &options);
 
         delta(
-            input.split("\n").map(String::from),
+            input.split("\n").map(String::from), //
             &config,
             &assets,
             &mut writer,
