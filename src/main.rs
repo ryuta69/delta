@@ -12,6 +12,7 @@ mod env;
 mod paint;
 mod parse;
 mod style;
+mod test;
 
 use std::io::{self, ErrorKind, Read, Write};
 use std::process;
