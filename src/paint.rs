@@ -14,8 +14,8 @@ use crate::edits;
 use crate::paint::superimpose_style_sections::superimpose_style_sections;
 use crate::style;
 
-const ANSI_CSI_ERASE_IN_LINE: &str = "\x1b[K";
-const ANSI_SGR_RESET: &str = "\x1b[0m";
+pub const ANSI_CSI_ERASE_IN_LINE: &str = "\x1b[K";
+pub const ANSI_SGR_RESET: &str = "\x1b[0m";
 
 pub struct Painter<'a> {
     pub minus_lines: Vec<String>,
@@ -270,6 +270,12 @@ pub fn paint_text(text: &str, style: Style, output_buffer: &mut String, true_col
 /// Return text together with shell escape codes specifying the foreground color.
 pub fn paint_text_foreground(text: &str, color: Color, true_color: bool) -> String {
     to_ansi_color(color, true_color).paint(text).to_string()
+}
+
+#[allow(dead_code)]
+pub fn paint_text_background(text: &str, color: Color, true_color: bool) -> String {
+    let style = ansi_term::Style::new().on(to_ansi_color(color, true_color));
+    style.paint(text).to_string()
 }
 
 // See

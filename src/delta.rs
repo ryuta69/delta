@@ -13,7 +13,7 @@ use crate::paint::{self, Painter};
 use crate::parse;
 use crate::style;
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum State {
     CommitMeta, // In commit metadata section
     FileMeta,   // In diff metadata section, between (possible) commit metadata and first hunk
@@ -330,25 +330,33 @@ fn handle_hunk_line(
             State::HunkPlus
         }
         Some(' ') => {
+            let state = State::HunkZero;
             let prefix = if line.is_empty() { "" } else { &line[..1] };
             painter.paint_buffered_lines();
             let line = prepare(&line, true, config);
-            let syntax_style_sections = Painter::get_line_syntax_style_sections(
-                &line,
-                &mut painter.highlighter,
-                None,
-                &painter.config,
-            );
+            let syntax_style_sections = if config.should_syntax_highlight(&state) {
+                Painter::get_line_syntax_style_sections(
+                    &line,
+                    &mut painter.highlighter,
+                    None,
+                    &painter.config,
+                )
+            } else {
+                vec![(style::get_no_style(), line.as_str())]
+            };
+            let diff_style_sections =
+                vec![(style::NO_BACKGROUND_COLOR_STYLE_MODIFIER, line.as_str())];
+
             Painter::paint_lines(
                 vec![syntax_style_sections],
-                vec![vec![(style::NO_BACKGROUND_COLOR_STYLE_MODIFIER, &line)]],
+                vec![diff_style_sections],
                 &mut painter.output_buffer,
                 config,
                 prefix,
                 style::NO_BACKGROUND_COLOR_STYLE_MODIFIER,
                 None,
             );
-            State::HunkZero
+            state
         }
         _ => {
             // The first character here could be e.g. '\' from '\ No newline at end of file'. This

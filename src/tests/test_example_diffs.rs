@@ -1,22 +1,17 @@
 #[cfg(test)]
 mod tests {
-    use bytelines::ByteLines;
+    use crate::tests::ansi_test_utils::ansi_test_utils;
+    use crate::tests::integration_test_utils::integration_test_utils;
     use console::strip_ansi_codes;
-    use std::env;
-    use std::io::BufReader;
-    use syntect::highlighting::StyleModifier;
-
-    use crate::bat::assets::HighlightingAssets;
-    use crate::cli;
-    use crate::config::Config;
-    use crate::delta::delta;
-    use crate::paint;
-    use crate::style;
 
     #[test]
     fn test_added_file() {
-        let options = get_command_line_options();
-        let output = strip_ansi_codes(&run_delta(ADDED_FILE_INPUT, &options)).to_string();
+        let options = integration_test_utils::get_command_line_options();
+        let output = strip_ansi_codes(&integration_test_utils::run_delta(
+            ADDED_FILE_INPUT,
+            &options,
+        ))
+        .to_string();
         assert!(output.contains("\nadded: a.py\n"));
         if false {
             // TODO: hline width
@@ -27,15 +22,19 @@ mod tests {
     #[test]
     #[ignore] // #128
     fn test_added_empty_file() {
-        let options = get_command_line_options();
-        let output = strip_ansi_codes(&run_delta(ADDED_EMPTY_FILE, &options)).to_string();
+        let options = integration_test_utils::get_command_line_options();
+        let output = strip_ansi_codes(&integration_test_utils::run_delta(
+            ADDED_EMPTY_FILE,
+            &options,
+        ))
+        .to_string();
         assert!(output.contains("\nadded: file\n"));
     }
 
     #[test]
     fn test_added_file_directory_path_containing_space() {
-        let options = get_command_line_options();
-        let output = strip_ansi_codes(&run_delta(
+        let options = integration_test_utils::get_command_line_options();
+        let output = strip_ansi_codes(&integration_test_utils::run_delta(
             ADDED_FILES_DIRECTORY_PATH_CONTAINING_SPACE,
             &options,
         ))
@@ -46,248 +45,53 @@ mod tests {
 
     #[test]
     fn test_renamed_file() {
-        let options = get_command_line_options();
-        let output = strip_ansi_codes(&run_delta(RENAMED_FILE_INPUT, &options)).to_string();
+        let options = integration_test_utils::get_command_line_options();
+        let output = strip_ansi_codes(&integration_test_utils::run_delta(
+            RENAMED_FILE_INPUT,
+            &options,
+        ))
+        .to_string();
         assert!(output.contains("\nrenamed: a.py ⟶   b.py\n"));
     }
 
     #[test]
     fn test_recognized_file_type() {
         // In addition to the background color, the code has language syntax highlighting.
-        let options = get_command_line_options();
+        let options = integration_test_utils::get_command_line_options();
         let input = ADDED_FILE_INPUT;
-        let output = get_line_of_code_from_delta(&input, &options);
-        assert_has_color_other_than_plus_color(&output, &options);
+        let output = integration_test_utils::get_line_of_code_from_delta(&input, &options);
+        ansi_test_utils::assert_has_color_other_than_plus_color(&output, &options);
     }
 
     #[test]
     fn test_unrecognized_file_type_with_theme() {
         // In addition to the background color, the code has the foreground color using the default
         // .txt syntax under the theme.
-        let options = get_command_line_options();
+        let options = integration_test_utils::get_command_line_options();
         let input = ADDED_FILE_INPUT.replace("a.py", "a");
-        let output = get_line_of_code_from_delta(&input, &options);
-        assert_has_color_other_than_plus_color(&output, &options);
+        let output = integration_test_utils::get_line_of_code_from_delta(&input, &options);
+        ansi_test_utils::assert_has_color_other_than_plus_color(&output, &options);
     }
 
     #[test]
     fn test_unrecognized_file_type_no_theme() {
         // The code has the background color only. (Since there is no theme, the code has no
         // foreground ansi color codes.)
-        let mut options = get_command_line_options();
+        let mut options = integration_test_utils::get_command_line_options();
         options.theme = Some("none".to_string());
         let input = ADDED_FILE_INPUT.replace("a.py", "a");
-        let output = get_line_of_code_from_delta(&input, &options);
-        assert_has_plus_color_only(&output, &options);
-    }
-
-    #[test]
-    fn test_theme_selection() {
-        #[derive(PartialEq)]
-        enum Mode {
-            Light,
-            Dark,
-        };
-        let assets = HighlightingAssets::new();
-        for (
-            theme_option,
-            bat_theme_env_var,
-            mode_option, // (--light, --dark)
-            expected_theme,
-            expected_mode,
-        ) in vec![
-            (None, "", None, style::DEFAULT_DARK_THEME, Mode::Dark),
-            (Some("GitHub".to_string()), "", None, "GitHub", Mode::Light),
-            (
-                Some("GitHub".to_string()),
-                "1337",
-                None,
-                "GitHub",
-                Mode::Light,
-            ),
-            (None, "1337", None, "1337", Mode::Dark),
-            (
-                None,
-                "<not set>",
-                None,
-                style::DEFAULT_DARK_THEME,
-                Mode::Dark,
-            ),
-            (
-                None,
-                "",
-                Some(Mode::Light),
-                style::DEFAULT_LIGHT_THEME,
-                Mode::Light,
-            ),
-            (
-                None,
-                "",
-                Some(Mode::Dark),
-                style::DEFAULT_DARK_THEME,
-                Mode::Dark,
-            ),
-            (
-                None,
-                "<@@@@@>",
-                Some(Mode::Light),
-                style::DEFAULT_LIGHT_THEME,
-                Mode::Light,
-            ),
-            (None, "1337", Some(Mode::Light), "1337", Mode::Light),
-            (Some("none".to_string()), "", None, "none", Mode::Dark),
-            (
-                Some("None".to_string()),
-                "",
-                Some(Mode::Light),
-                "None",
-                Mode::Light,
-            ),
-        ] {
-            if bat_theme_env_var == "<not set>" {
-                env::remove_var("BAT_THEME")
-            } else {
-                env::set_var("BAT_THEME", bat_theme_env_var);
-            }
-            let is_true_color = true;
-            let mut options = get_command_line_options();
-            options.theme = theme_option;
-            match mode_option {
-                Some(Mode::Light) => {
-                    options.light = true;
-                    options.dark = false;
-                }
-                Some(Mode::Dark) => {
-                    options.light = false;
-                    options.dark = true;
-                }
-                None => {
-                    options.light = false;
-                    options.dark = false;
-                }
-            }
-            let config = cli::process_command_line_arguments(&assets, &options);
-            assert_eq!(config.theme_name, expected_theme);
-            if style::is_no_syntax_highlighting_theme_name(expected_theme) {
-                assert!(config.theme.is_none())
-            } else {
-                assert_eq!(config.theme.unwrap().name.as_ref().unwrap(), expected_theme);
-            }
-            assert_eq!(
-                config.minus_style_modifier.background.unwrap(),
-                style::get_minus_color_default(expected_mode == Mode::Light, is_true_color)
-            );
-            assert_eq!(
-                config.minus_emph_style_modifier.background.unwrap(),
-                style::get_minus_emph_color_default(expected_mode == Mode::Light, is_true_color)
-            );
-            assert_eq!(
-                config.plus_style_modifier.background.unwrap(),
-                style::get_plus_color_default(expected_mode == Mode::Light, is_true_color)
-            );
-            assert_eq!(
-                config.plus_emph_style_modifier.background.unwrap(),
-                style::get_plus_emph_color_default(expected_mode == Mode::Light, is_true_color)
-            );
-        }
-    }
-
-    fn assert_has_color_other_than_plus_color(string: &str, options: &cli::Opt) {
-        let (string_without_any_color, string_with_plus_color_only) =
-            get_color_variants(string, &options);
-        assert_ne!(string, string_without_any_color);
-        assert_ne!(string, string_with_plus_color_only);
-    }
-
-    fn assert_has_plus_color_only(string: &str, options: &cli::Opt) {
-        let (string_without_any_color, string_with_plus_color_only) =
-            get_color_variants(string, &options);
-        assert_ne!(string, string_without_any_color);
-        assert_eq!(string, string_with_plus_color_only);
-    }
-
-    fn get_color_variants(string: &str, options: &cli::Opt) -> (String, String) {
-        let assets = HighlightingAssets::new();
-        let config = cli::process_command_line_arguments(&assets, &options);
-
-        let string_without_any_color = strip_ansi_codes(string).to_string();
-        let string_with_plus_color_only = paint_text(
-            &string_without_any_color,
-            config.plus_style_modifier,
-            &config,
-        );
-        (string_without_any_color, string_with_plus_color_only)
-    }
-
-    fn paint_text(input: &str, style_modifier: StyleModifier, config: &Config) -> String {
-        let mut output = String::new();
-        let style = config.no_style.apply(style_modifier);
-        paint::paint_text(&input, style, &mut output, config.true_color);
-        output
-    }
-
-    fn get_line_of_code_from_delta(input: &str, options: &cli::Opt) -> String {
-        let output = run_delta(&input, &options);
-        let line_of_code = output.lines().nth(12).unwrap();
-        assert!(strip_ansi_codes(line_of_code) == " class X:");
-        line_of_code.to_string()
-    }
-
-    fn run_delta(input: &str, options: &cli::Opt) -> String {
-        let mut writer: Vec<u8> = Vec::new();
-
-        let assets = HighlightingAssets::new();
-        let config = cli::process_command_line_arguments(&assets, &options);
-
-        delta(
-            ByteLines::new(BufReader::new(input.as_bytes())),
-            &config,
-            &assets,
-            &mut writer,
-        )
-        .unwrap();
-        String::from_utf8(writer).unwrap()
-    }
-
-    fn get_command_line_options() -> cli::Opt {
-        cli::Opt {
-            light: false,
-            dark: false,
-            minus_color: None,
-            minus_emph_color: None,
-            minus_foreground_color: None,
-            minus_emph_foreground_color: None,
-            plus_color: None,
-            plus_emph_color: None,
-            plus_foreground_color: None,
-            plus_emph_foreground_color: None,
-            color_only: false,
-            keep_plus_minus_markers: false,
-            theme: None,
-            lines_to_be_syntax_highlighted: "0+".to_string(),
-            highlight_minus_lines: false,
-            commit_style: cli::SectionStyle::Plain,
-            commit_color: "Yellow".to_string(),
-            file_style: cli::SectionStyle::Underline,
-            file_color: "Blue".to_string(),
-            hunk_style: cli::SectionStyle::Box,
-            hunk_color: "blue".to_string(),
-            true_color: "always".to_string(),
-            width: Some("variable".to_string()),
-            paging_mode: "auto".to_string(),
-            tab_width: 4,
-            show_background_colors: false,
-            list_languages: false,
-            list_theme_names: false,
-            list_themes: false,
-            max_line_distance: 0.3,
-        }
+        let output = integration_test_utils::get_line_of_code_from_delta(&input, &options);
+        ansi_test_utils::assert_has_plus_color_only(&output, &options);
     }
 
     #[test]
     fn test_diff_unified_two_files() {
-        let options = get_command_line_options();
-        let output = strip_ansi_codes(&run_delta(DIFF_UNIFIED_TWO_FILES, &options)).to_string();
+        let options = integration_test_utils::get_command_line_options();
+        let output = strip_ansi_codes(&integration_test_utils::run_delta(
+            DIFF_UNIFIED_TWO_FILES,
+            &options,
+        ))
+        .to_string();
         let mut lines = output.split('\n');
 
         // Header
@@ -304,9 +108,12 @@ mod tests {
 
     #[test]
     fn test_diff_unified_two_directories() {
-        let options = get_command_line_options();
-        let output =
-            strip_ansi_codes(&run_delta(DIFF_UNIFIED_TWO_DIRECTORIES, &options)).to_string();
+        let options = integration_test_utils::get_command_line_options();
+        let output = strip_ansi_codes(&integration_test_utils::run_delta(
+            DIFF_UNIFIED_TWO_DIRECTORIES,
+            &options,
+        ))
+        .to_string();
         let mut lines = output.split('\n');
 
         // Header
@@ -332,8 +139,12 @@ mod tests {
     #[test]
     #[ignore] // Ideally, delta would make this test pass. See #121.
     fn test_delta_ignores_non_diff_input() {
-        let options = get_command_line_options();
-        let output = strip_ansi_codes(&run_delta(NOT_A_DIFF_OUTPUT, &options)).to_string();
+        let options = integration_test_utils::get_command_line_options();
+        let output = strip_ansi_codes(&integration_test_utils::run_delta(
+            NOT_A_DIFF_OUTPUT,
+            &options,
+        ))
+        .to_string();
         assert_eq!(output, NOT_A_DIFF_OUTPUT.to_owned() + "\n");
     }
 
@@ -343,9 +154,9 @@ mod tests {
             DIFF_WITH_UNRECOGNIZED_PRECEDING_MATERIAL_1,
             DIFF_WITH_UNRECOGNIZED_PRECEDING_MATERIAL_2,
         ] {
-            let mut options = get_command_line_options();
+            let mut options = integration_test_utils::get_command_line_options();
             options.color_only = true;
-            let output = run_delta(input, &options);
+            let output = integration_test_utils::run_delta(input, &options);
             assert_eq!(strip_ansi_codes(&output).to_string(), input.to_owned());
             assert_ne!(output, input.to_owned());
         }
@@ -353,8 +164,8 @@ mod tests {
 
     #[test]
     fn test_diff_with_merge_conflict_is_not_truncated() {
-        let options = get_command_line_options();
-        let output = run_delta(DIFF_WITH_MERGE_CONFLICT, &options);
+        let options = integration_test_utils::get_command_line_options();
+        let output = integration_test_utils::run_delta(DIFF_WITH_MERGE_CONFLICT, &options);
         // TODO: The + in the first column is being removed.
         assert!(strip_ansi_codes(&output).contains("+>>>>>>> Stashed changes"));
         assert_eq!(output.split('\n').count(), 46);
@@ -362,9 +173,9 @@ mod tests {
 
     #[test]
     fn test_diff_with_merge_conflict_is_passed_on_unchanged_under_color_only() {
-        let mut options = get_command_line_options();
+        let mut options = integration_test_utils::get_command_line_options();
         options.color_only = true;
-        let output = run_delta(DIFF_WITH_MERGE_CONFLICT, &options);
+        let output = integration_test_utils::run_delta(DIFF_WITH_MERGE_CONFLICT, &options);
         assert_eq!(
             strip_ansi_codes(&output).to_string(),
             DIFF_WITH_MERGE_CONFLICT.to_owned()
@@ -373,8 +184,8 @@ mod tests {
 
     #[test]
     fn test_submodule_contains_untracked_content() {
-        let options = get_command_line_options();
-        let output = strip_ansi_codes(&run_delta(
+        let options = integration_test_utils::get_command_line_options();
+        let output = strip_ansi_codes(&integration_test_utils::run_delta(
             SUBMODULE_CONTAINS_UNTRACKED_CONTENT_INPUT,
             &options,
         ))
@@ -384,8 +195,8 @@ mod tests {
 
     #[test]
     fn test_triple_dash_at_beginning_of_line_in_code() {
-        let options = get_command_line_options();
-        let output = strip_ansi_codes(&run_delta(
+        let options = integration_test_utils::get_command_line_options();
+        let output = strip_ansi_codes(&integration_test_utils::run_delta(
             TRIPLE_DASH_AT_BEGINNING_OF_LINE_IN_CODE,
             &options,
         ))
@@ -397,15 +208,20 @@ mod tests {
 
     #[test]
     fn test_binary_files_differ() {
-        let options = get_command_line_options();
-        let output = strip_ansi_codes(&run_delta(BINARY_FILES_DIFFER, &options)).to_string();
+        let options = integration_test_utils::get_command_line_options();
+        let output = strip_ansi_codes(&integration_test_utils::run_delta(
+            BINARY_FILES_DIFFER,
+            &options,
+        ))
+        .to_string();
         assert!(output.contains("Binary files /dev/null and b/foo differ\n"));
     }
 
     #[test]
     fn test_diff_in_diff() {
-        let options = get_command_line_options();
-        let output = strip_ansi_codes(&run_delta(DIFF_IN_DIFF, &options)).to_string();
+        let options = integration_test_utils::get_command_line_options();
+        let output = strip_ansi_codes(&integration_test_utils::run_delta(DIFF_IN_DIFF, &options))
+            .to_string();
         assert!(output.contains("\n ---\n"));
         assert!(output.contains("\n Subject: [PATCH] Init\n"));
     }

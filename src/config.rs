@@ -42,6 +42,37 @@ pub struct Config<'a> {
     pub paging_mode: PagingMode,
 }
 
+#[allow(dead_code)]
+pub enum ColorLayer {
+    Background,
+    Foreground,
+}
+use ColorLayer::*;
+use State::*;
+
+impl<'a> Config<'a> {
+    #[allow(dead_code)]
+    pub fn get_color(&self, state: &State, layer: ColorLayer) -> Option<Color> {
+        let modifier = match state {
+            HunkMinus => Some(self.minus_style_modifier),
+            HunkZero => None,
+            HunkPlus => Some(self.plus_style_modifier),
+            _ => panic!("Invalid"),
+        };
+        match (modifier, layer) {
+            (Some(modifier), Background) => modifier.background,
+            (Some(modifier), Foreground) => modifier.foreground,
+            (None, _) => None,
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn should_syntax_highlight(&self, state: &State) -> bool {
+        self.lines_to_be_syntax_highlighted
+            .contains((*state).clone() as usize)
+    }
+}
+
 pub fn get_config<'a>(
     opt: &'a cli::Opt,
     syntax_set: &'a SyntaxSet,
