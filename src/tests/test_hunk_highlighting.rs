@@ -10,6 +10,8 @@ mod tests {
     use crate::tests::ansi_test_utils::ansi_test_utils;
     use crate::tests::integration_test_utils::integration_test_utils;
 
+    const VERBOSE: bool = false;
+
     #[test]
     fn test_hunk_highlighting() {
         let mut options = integration_test_utils::get_command_line_options();
@@ -23,6 +25,12 @@ mod tests {
                 vec!["none", "all", "+", "0", "0+", "-", "-+", "-0", "-0+"]
             {
                 options.lines_to_be_syntax_highlighted = lines_to_be_syntax_highlighted.to_string();
+                if VERBOSE {
+                    println!(
+                        "\n--syntax-highlight {:?} --minus-foreground-color {:?}",
+                        options.lines_to_be_syntax_highlighted, options.minus_foreground_color
+                    );
+                }
                 _do_hunk_color_test(&options);
             }
         }
@@ -130,6 +138,9 @@ mod tests {
 
         // TODO: check same length
         for ((state, assertion), line) in expectation.iter().zip_eq(lines) {
+            if VERBOSE {
+                println!("{}", line)
+            };
             if config.should_syntax_highlight(state) {
                 assert!(ansi_test_utils::is_syntax_highlighted(line));
             } else {
