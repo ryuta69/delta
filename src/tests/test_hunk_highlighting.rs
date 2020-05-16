@@ -13,8 +13,11 @@ mod tests {
     #[test]
     fn test_hunk_highlighting() {
         let mut options = integration_test_utils::get_command_line_options();
+        options.theme = Some("GitHub".to_string());
         options.max_line_distance = 1.0;
-        for minus_foreground_color in vec![None, Some("red".to_string())] {
+        options.minus_emph_color = Some("#ffa0a0".to_string());
+        options.plus_emph_color = Some("#80ef80".to_string());
+        for minus_foreground_color in vec![None, Some("blue".to_string())] {
             options.minus_foreground_color = minus_foreground_color;
             for lines_to_be_syntax_highlighted in
                 vec!["none", "all", "+", "0", "0+", "-", "-+", "-0", "-0+"]
