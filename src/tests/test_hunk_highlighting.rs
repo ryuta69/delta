@@ -14,11 +14,14 @@ mod tests {
     fn test_hunk_highlighting() {
         let mut options = integration_test_utils::get_command_line_options();
         options.max_line_distance = 1.0;
-        for lines_to_be_syntax_highlighted in
-            vec!["none", "all", "+", "0", "0+", "-", "-+", "-0", "-0+"]
-        {
-            options.lines_to_be_syntax_highlighted = lines_to_be_syntax_highlighted.to_string();
-            _do_hunk_color_test(&options);
+        for minus_foreground_color in vec![None, Some("red".to_string())] {
+            options.minus_foreground_color = minus_foreground_color;
+            for lines_to_be_syntax_highlighted in
+                vec!["none", "all", "+", "0", "0+", "-", "-+", "-0", "-0+"]
+            {
+                options.lines_to_be_syntax_highlighted = lines_to_be_syntax_highlighted.to_string();
+                _do_hunk_color_test(&options);
+            }
         }
     }
 
