@@ -44,6 +44,13 @@ pub struct Config<'a> {
     pub null_syntect_style: SyntectStyle,
     pub max_buffered_lines: usize,
     pub paging_mode: PagingMode,
+    pub show_line_numbers: bool,
+    pub number_minus_foreground_color: Color,
+    pub number_plus_foreground_color: Color,
+    pub number_right_divider_foreground_color: Color,
+    pub number_center_divider_foreground_color: Color,
+    pub number_center_divider_string: &'a str,
+    pub number_right_divider_string: &'a str,
 }
 
 pub fn get_config<'a>(
@@ -126,6 +133,33 @@ pub fn get_config<'a>(
         null_syntect_style: SyntectStyle::default(),
         max_buffered_lines: 32,
         paging_mode,
+        show_line_numbers: opt.show_line_numbers,
+        number_minus_foreground_color: color_from_rgb_or_ansi_code_with_default(
+            opt.number_minus_foreground_color.as_deref(),
+            Some(color_from_rgb_or_ansi_code(&opt.hunk_color, true_color)),
+            true_color,
+        )
+        .unwrap(),
+        number_plus_foreground_color: color_from_rgb_or_ansi_code_with_default(
+            opt.number_plus_foreground_color.as_deref(),
+            Some(color_from_rgb_or_ansi_code(&opt.hunk_color, true_color)),
+            true_color,
+        )
+        .unwrap(),
+        number_right_divider_foreground_color: color_from_rgb_or_ansi_code_with_default(
+            opt.number_right_divider_foreground_color.as_deref(),
+            Some(color_from_rgb_or_ansi_code(&opt.hunk_color, true_color)),
+            true_color,
+        )
+        .unwrap(),
+        number_center_divider_foreground_color: color_from_rgb_or_ansi_code_with_default(
+            opt.number_center_divider_foreground_color.as_deref(),
+            Some(color_from_rgb_or_ansi_code(&opt.hunk_color, true_color)),
+            true_color,
+        )
+        .unwrap(),
+        number_center_divider_string: opt.number_center_divider_string.as_ref(),
+        number_right_divider_string: opt.number_right_divider_string.as_ref(),
     }
 }
 

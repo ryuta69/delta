@@ -234,6 +234,10 @@ FLAGS:
                                      those modes. It can also be used to experiment with different RGB hex codes by
                                      combining this option with --minus-color, --minus-emph-color, --plus-color, --plus-
                                      emph-color.
+    -n, --number                     Display line numbers next to the diff. The first column contains line numbers in
+                                     the previous version of the file, and the second column contains line number in the
+                                     new version of the file. A blank cell in the first or second column indicates that
+                                     the line does not exist in that file (it was added or removed, respectively)
     -V, --version                    Prints version information
 
 OPTIONS:
@@ -255,6 +259,24 @@ OPTIONS:
             0.3]
         --minus-color <minus_color>                The background color to use for removed lines.
         --minus-emph-color <minus_emph_color>      The background color to use for emphasized sections of removed lines.
+
+        --number-divider-center-foreground-color <number-divider-center-foreground-color>
+            Color for the center dividing line of the line numbers section, if --number is set. Defaults to the
+            configured hunk_color
+        --number-divider-center-string <number-divider-center-string>
+            String to use as the center divider of the line numbers section, if --number is set [default: ⋮]
+        --number-divider-right-foreground-color <number-divider-right-foreground-color>
+            Color for the right dividing line of the line numbers section, if --number is set. Defaults to the
+            configured hunk_color
+        --number-divider-right-string <number-divider-right-string>
+            String to use as the right divider of the line numbers section, if --number is set [default: │]
+        --number-minus-foreground-color <number-minus-foreground-color>
+            Color for the left (minus) column of line numbers (--number), if --number is set. Defaults to the configured
+            hunk_color
+        --number-plus-foreground-color <number-plus-foreground-color>
+            Color for the right (plus) column of line numbers (--number), if --number is set. Defaults to the configured
+            hunk_color
+
         --paging <paging_mode>
             Whether to use a pager when displaying output. Options are: auto, always, and never. The default pager is
             `less`: this can be altered by setting the environment variables BAT_PAGER or PAGER (BAT_PAGER has

@@ -44,6 +44,13 @@ pub mod integration_test_utils {
             list_theme_names: false,
             list_themes: false,
             max_line_distance: 0.3,
+            show_line_numbers: false,
+            number_minus_foreground_color: None,
+            number_plus_foreground_color: None,
+            number_right_divider_foreground_color: None,
+            number_center_divider_foreground_color: None,
+            number_center_divider_string: "⋮".to_string(),
+            number_right_divider_string: "│".to_string(),
         }
     }
 

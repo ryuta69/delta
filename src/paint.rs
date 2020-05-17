@@ -22,6 +22,8 @@ pub struct Painter<'a> {
     pub highlighter: HighlightLines<'a>,
     pub config: &'a config::Config<'a>,
     pub output_buffer: String,
+    pub minus_line_number: usize,
+    pub plus_line_number: usize,
 }
 
 impl<'a> Painter<'a> {
@@ -37,6 +39,8 @@ impl<'a> Painter<'a> {
             highlighter: dummy_highlighter,
             writer,
             config,
+            minus_line_number: 0,
+            plus_line_number: 0,
         }
     }
 
@@ -71,11 +75,23 @@ impl<'a> Painter<'a> {
         );
         let (minus_line_diff_style_sections, plus_line_diff_style_sections) =
             Self::get_diff_style_sections(&self.minus_lines, &self.plus_lines, self.config);
+
+        let mut minus_line_numbers = Vec::new();
+        let mut plus_line_numbers = Vec::new();
+        for _line in &self.minus_lines {
+            minus_line_numbers.push((Some(self.minus_line_number), None));
+            self.minus_line_number += 1;
+        }
+        for _line in &self.plus_lines {
+            plus_line_numbers.push((None, Some(self.plus_line_number)));
+            self.plus_line_number += 1;
+        }
         // TODO: lines and style sections contain identical line text
         if !self.minus_lines.is_empty() {
             Painter::paint_lines(
                 minus_line_syntax_style_sections,
                 minus_line_diff_style_sections,
+                minus_line_numbers,
                 &mut self.output_buffer,
                 self.config,
                 self.config.minus_line_marker,
@@ -88,6 +104,7 @@ impl<'a> Painter<'a> {
             Painter::paint_lines(
                 plus_line_syntax_style_sections,
                 plus_line_diff_style_sections,
+                plus_line_numbers,
                 &mut self.output_buffer,
                 self.config,
                 self.config.plus_line_marker,
@@ -105,6 +122,7 @@ impl<'a> Painter<'a> {
     pub fn paint_lines(
         syntax_style_sections: Vec<Vec<(SyntectStyle, &str)>>,
         diff_style_sections: Vec<Vec<(Style, &str)>>,
+        line_number_sections: Vec<(Option<usize>, Option<usize>)>,
         output_buffer: &mut String,
         config: &config::Config,
         prefix: &str,
@@ -120,8 +138,10 @@ impl<'a> Painter<'a> {
         // 2. We must ensure that we fill rightwards with the appropriate
         //    non-emph background color. In that case we don't use the last
         //    style of the line, because this might be emph.
-        for (syntax_sections, diff_sections) in
-            syntax_style_sections.iter().zip(diff_style_sections.iter())
+        for ((syntax_sections, diff_sections), line_numbers) in syntax_style_sections
+            .iter()
+            .zip(diff_style_sections.iter())
+            .zip(line_number_sections.iter())
         {
             let right_fill_style = if diff_sections.len() > 1 {
                 non_emph_style // line contains an emph section
@@ -161,6 +181,10 @@ impl<'a> Painter<'a> {
                     .ends_with(&ANSI_SGR_RESET.to_lowercase())
                 {
                     line.truncate(line.len() - ANSI_SGR_RESET.len());
+                }
+
+                if config.show_line_numbers {
+                    output_buffer.push_str(&format_line_numbers(*line_numbers, config));
                 }
                 output_buffer.push_str(&line);
                 output_buffer.push_str(ANSI_CSI_ERASE_IN_LINE);
@@ -267,6 +291,42 @@ impl<'a> Painter<'a> {
             }
         }
     }
+}
+
+fn _paint_line_numbers(line_number: Option<usize>, color: Color, true_color: bool) -> String {
+    let formatted = match line_number {
+        Some(x) => format!("{:^4}", x),
+        None => format!("    "),
+    };
+    paint_text_foreground(&formatted, color, true_color)
+}
+
+pub fn format_line_numbers(
+    line_numbers: (Option<usize>, Option<usize>),
+    config: &config::Config,
+) -> String {
+    let (minus_line_number, plus_line_number) = line_numbers;
+    let minus = _paint_line_numbers(
+        minus_line_number,
+        config.number_minus_foreground_color,
+        config.true_color,
+    );
+    let plus = _paint_line_numbers(
+        plus_line_number,
+        config.number_plus_foreground_color,
+        config.true_color,
+    );
+    let divider_center = paint_text_foreground(
+        config.number_center_divider_string,
+        config.number_center_divider_foreground_color,
+        config.true_color,
+    );
+    let divider_right = paint_text_foreground(
+        config.number_right_divider_string,
+        config.number_right_divider_foreground_color,
+        config.true_color,
+    );
+    format!("{}{}{}{}", minus, divider_center, plus, divider_right)
 }
 
 mod superimpose_style_sections {

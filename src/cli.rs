@@ -253,6 +253,42 @@ pub struct Opt {
     #[structopt(long = "paging", default_value = "auto")]
     pub paging_mode: String,
 
+    /// Display line numbers next to the diff. The first column contains line
+    /// numbers in the previous version of the file, and the second column contains
+    /// line number in the new version of the file. A blank cell in the first or
+    /// second column indicates that the line does not exist in that file (it was
+    /// added or removed, respectively).
+    #[structopt(short = "n", long = "number")]
+    pub show_line_numbers: bool,
+
+    /// Color for the left (minus) column of line numbers (--number), if --number is set.
+    /// Defaults to --hunk-color.
+    #[structopt(long = "number-minus-foreground-color")]
+    pub number_minus_foreground_color: Option<String>,
+
+    /// Color for the right (plus) column of line numbers (--number), if --number is set.
+    /// Defaults to --hunk-color.
+    #[structopt(long = "number-plus-foreground-color")]
+    pub number_plus_foreground_color: Option<String>,
+
+    /// Color for the right dividing line of the line numbers section, if --number is set.
+    /// Defaults to --hunk-color.
+    #[structopt(long = "number-right-divider-foreground-color")]
+    pub number_right_divider_foreground_color: Option<String>,
+
+    /// Color for the center dividing line of the line numbers section, if --number is set.
+    /// Defaults to --hunk-color.
+    #[structopt(long = "number-center-divider-foreground-color")]
+    pub number_center_divider_foreground_color: Option<String>,
+
+    /// String to use as the center divider of the line numbers section, if --number is set.
+    #[structopt(long = "number-center-divider-string", default_value = "⋮")]
+    pub number_center_divider_string: String,
+
+    /// String to use as the right divider of the line numbers section, if --number is set.
+    #[structopt(long = "number-right-divider-string", default_value = "│")]
+    pub number_right_divider_string: String,
+
     #[structopt(long = "minus-color", name = "minus-background-color")]
     /// Deprecated: an alternative way to set the background color for removed lines. Use
     /// --minus-style instead.

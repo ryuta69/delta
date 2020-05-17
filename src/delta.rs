@@ -252,7 +252,9 @@ fn handle_hunk_meta_line(
         cli::SectionStyle::Plain => panic!(),
         cli::SectionStyle::Omit => return Ok(()),
     };
-    let (raw_code_fragment, line_number) = parse::parse_hunk_metadata(&line);
+    let (raw_code_fragment, line_numbers) = parse::parse_hunk_metadata(&line);
+    painter.minus_line_number = line_numbers[0];
+    painter.plus_line_number = line_numbers.last().copied().unwrap();
     let lines = vec![prepare(raw_code_fragment, false, config)];
     if !lines[0].is_empty() {
         let syntax_style_sections = Painter::get_syntax_style_sections_for_lines(
@@ -264,6 +266,7 @@ fn handle_hunk_meta_line(
         Painter::paint_lines(
             syntax_style_sections,
             vec![vec![(Style::new(), lines[0].as_str())]],
+            vec![(None, None)],
             &mut painter.output_buffer,
             config,
             "",
@@ -281,7 +284,17 @@ fn handle_hunk_meta_line(
         )?;
         painter.output_buffer.clear();
     }
-    writeln!(painter.writer, "\n{}", config.hunk_color.paint(line_number))?;
+    if config.show_line_numbers {
+        writeln!(painter.writer, "")?;
+    } else {
+        writeln!(
+            painter.writer,
+            "\n{}",
+            config
+                .hunk_color
+                .paint(&format!("{}", painter.plus_line_number))
+        )?;
+    }
     Ok(())
 }
 
@@ -334,6 +347,10 @@ fn handle_hunk_line(
             Painter::paint_lines(
                 syntax_style_sections,
                 vec![diff_style_sections],
+                vec![(
+                    Some(painter.minus_line_number),
+                    Some(painter.plus_line_number),
+                )],
                 &mut painter.output_buffer,
                 config,
                 prefix,
@@ -341,6 +358,8 @@ fn handle_hunk_line(
                 config.zero_style,
                 None,
             );
+            painter.minus_line_number += 1;
+            painter.plus_line_number += 1;
             state
         }
         _ => {
