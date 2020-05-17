@@ -66,13 +66,13 @@ impl<'a> Painter<'a> {
     pub fn paint_buffered_lines(&mut self) {
         let minus_line_syntax_style_sections = Self::get_syntax_style_sections_for_lines(
             &self.minus_lines,
-            &State::HunkMinus,
+            self.config.should_syntax_highlight(&State::HunkMinus),
             &mut self.highlighter,
             self.config,
         );
         let plus_line_syntax_style_sections = Self::get_syntax_style_sections_for_lines(
             &self.plus_lines,
-            &State::HunkPlus,
+            self.config.should_syntax_highlight(&State::HunkPlus),
             &mut self.highlighter,
             self.config,
         );
@@ -169,7 +169,7 @@ impl<'a> Painter<'a> {
 
     fn get_syntax_style_sections_for_lines<'s>(
         lines: &'s [String],
-        state: &State,
+        should_syntax_highlight: bool,
         highlighter: &mut HighlightLines,
         config: &config::Config,
     ) -> Vec<Vec<(Style, &'s str)>> {
@@ -177,7 +177,7 @@ impl<'a> Painter<'a> {
         for line in lines.iter() {
             line_sections.push(Painter::get_line_syntax_style_sections(
                 line,
-                state,
+                should_syntax_highlight,
                 highlighter,
                 &config,
             ));
@@ -187,11 +187,11 @@ impl<'a> Painter<'a> {
 
     pub fn get_line_syntax_style_sections(
         line: &'a str,
-        state: &State,
+        should_syntax_highlight: bool,
         highlighter: &mut HighlightLines,
         config: &config::Config,
     ) -> Vec<(Style, &'a str)> {
-        if config.should_syntax_highlight(state) {
+        if should_syntax_highlight {
             highlighter.highlight(line, &config.syntax_set)
         } else {
             vec![(config.no_style, line)]
