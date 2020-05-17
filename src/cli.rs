@@ -358,6 +358,12 @@ fn get_lines_to_be_syntax_highlighted(opt: &Opt) -> BitSet {
             }
         });
     }
+    if opt.minus_foreground_color.is_some() || opt.minus_emph_foreground_color.is_some() {
+        lines_to_be_syntax_highlighted.remove(State::HunkMinus as usize);
+    }
+    if opt.plus_foreground_color.is_some() || opt.plus_emph_foreground_color.is_some() {
+        lines_to_be_syntax_highlighted.remove(State::HunkPlus as usize);
+    }
     lines_to_be_syntax_highlighted
 }
 
