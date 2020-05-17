@@ -19,19 +19,45 @@ mod tests {
         options.max_line_distance = 1.0;
         options.minus_emph_color = Some("#ffa0a0".to_string());
         options.plus_emph_color = Some("#80ef80".to_string());
-        for minus_foreground_color in vec![None, Some("blue".to_string())] {
+        for minus_foreground_color in vec![None, Some("green".to_string())] {
             options.minus_foreground_color = minus_foreground_color;
-            for lines_to_be_syntax_highlighted in
-                vec!["none", "all", "+", "0", "0+", "-", "-+", "-0", "-0+"]
-            {
-                options.lines_to_be_syntax_highlighted = lines_to_be_syntax_highlighted.to_string();
-                if VERBOSE {
-                    println!(
-                        "\n--syntax-highlight {:?} --minus-foreground-color {:?}",
-                        options.lines_to_be_syntax_highlighted, options.minus_foreground_color
-                    );
+            for minus_emph_foreground_color in vec![None, Some("#80ef80".to_string())] {
+                options.minus_emph_foreground_color = minus_emph_foreground_color;
+                for plus_foreground_color in vec![None, Some("red".to_string())] {
+                    options.plus_foreground_color = plus_foreground_color;
+                    for plus_emph_foreground_color in vec![None, Some("#ffa0a0".to_string())] {
+                        options.plus_emph_foreground_color = plus_emph_foreground_color;
+                        for lines_to_be_syntax_highlighted in vec!["none", "all"] {
+                            options.lines_to_be_syntax_highlighted =
+                                lines_to_be_syntax_highlighted.to_string();
+                            if VERBOSE {
+                                println!();
+                                print!(
+                                    " --syntax-highlight {:?}",
+                                    options.lines_to_be_syntax_highlighted
+                                );
+                                print!(
+                                    " --minus-foreground-color {:?}",
+                                    options.minus_foreground_color
+                                );
+                                print!(
+                                    " --minus-emph-foreground-color {:?}",
+                                    options.minus_emph_foreground_color
+                                );
+                                print!(
+                                    " --plus-foreground-color {:?}",
+                                    options.plus_foreground_color
+                                );
+                                print!(
+                                    " --plus-emph-foreground-color {:?}",
+                                    options.plus_emph_foreground_color
+                                );
+                                println!();
+                            }
+                            _do_hunk_color_test(&options);
+                        }
+                    }
                 }
-                _do_hunk_color_test(&options);
             }
         }
     }
