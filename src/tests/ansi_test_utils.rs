@@ -58,7 +58,9 @@ pub mod ansi_test_utils {
                 .unwrap_or_else(|| panic!("state {:?} does not have a background color", state)),
             true,
         );
-        let ansi_sequence = painted.trim_end_matches(paint::ANSI_SGR_RESET);
+        let ansi_sequence = painted
+            .trim_end_matches(paint::ANSI_SGR_RESET)
+            .trim_end_matches("m");
         string.starts_with(ansi_sequence)
     }
 
@@ -71,15 +73,17 @@ pub mod ansi_test_utils {
     }
 
     pub fn assert_line_has_expected_ansi_sequences(line: &str, expected: &Vec<(&str, &str)>) {
-        assert_eq!(line.ansi_parse().count(), expected.len());
-        for ((expected_ansi_sequence, _), ref token) in expected.iter().zip_eq(line.ansi_parse()) {
+        let parsed_line = line.ansi_parse().filter(|token| match token {
+            Escape(SetGraphicsMode(parameters)) if parameters == &vec![0 as u32] => false,
+            _ => true,
+        });
+        for ((expected_ansi_sequence, _), ref token) in expected.iter().zip_eq(parsed_line) {
             match token {
                 TextBlock(s) => {
                     assert!(s.starts_with(*expected_ansi_sequence));
                 }
-                Escape(_) => {
-                    assert_eq!(expected_ansi_sequence, &paint::ANSI_SGR_RESET);
-                }
+                Escape(SetGraphicsMode(parameters)) => assert_eq!(parameters, &vec![0 as u32]),
+                _ => panic!("Unexpected token: {:?}", token),
             }
         }
     }

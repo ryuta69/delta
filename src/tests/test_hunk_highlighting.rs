@@ -51,6 +51,7 @@ mod tests {
         let minus =
             paint::paint_text_background("", config.minus_style_modifier.background.unwrap(), true)
                 .trim_end_matches(paint::ANSI_SGR_RESET)
+                .trim_end_matches("m")
                 .to_string();
         let minus_emph = paint::paint_text_background(
             "",
@@ -58,10 +59,12 @@ mod tests {
             true,
         )
         .trim_end_matches(paint::ANSI_SGR_RESET)
+        .trim_end_matches("m")
         .to_string();
         let plus =
             paint::paint_text_background("", config.plus_style_modifier.background.unwrap(), true)
                 .trim_end_matches(paint::ANSI_SGR_RESET)
+                .trim_end_matches("m")
                 .to_string();
         let plus_emph = paint::paint_text_background(
             "",
@@ -69,6 +72,7 @@ mod tests {
             true,
         )
         .trim_end_matches(paint::ANSI_SGR_RESET)
+        .trim_end_matches("m")
         .to_string();
 
         let expectation = vec![
@@ -84,32 +88,22 @@ mod tests {
                     (minus.as_str(), "(22222222, 22222222"),
                     (minus_emph.as_str(), ", 22222222"),
                     (minus.as_str(), ")"),
-                    (paint::ANSI_SGR_RESET, ""),
                 ],
             ),
             // line 3: removed
             (
                 State::HunkMinus,
-                vec![
-                    (minus.as_str(), "(33333333, 33333333, 33333333)"),
-                    (paint::ANSI_SGR_RESET, ""),
-                ],
+                vec![(minus.as_str(), "(33333333, 33333333, 33333333)")],
             ),
             // line 4: removed
             (
                 State::HunkMinus,
-                vec![
-                    (minus.as_str(), "(44444444, 44444444, 44444444)"),
-                    (paint::ANSI_SGR_RESET, ""),
-                ],
+                vec![(minus.as_str(), "(44444444, 44444444, 44444444)")],
             ),
             // line 5: added, and syntax-higlighted.
             (
                 State::HunkPlus,
-                vec![
-                    (plus.as_str(), "(22222222, 22222222)"),
-                    (paint::ANSI_SGR_RESET, ""),
-                ],
+                vec![(plus.as_str(), "(22222222, 22222222)")],
             ),
             // line 6: added, and syntax-highlighted. First is plus-emph.
             (
@@ -118,7 +112,6 @@ mod tests {
                     (plus.as_str(), "("),
                     (plus_emph.as_str(), "33333333, "),
                     (plus.as_str(), "33333333, 33333333, 33333333)"),
-                    (paint::ANSI_SGR_RESET, ""),
                 ],
             ),
             // line 7: unchanged
@@ -129,10 +122,7 @@ mod tests {
             // line 8: added, and syntax-highlighted.
             (
                 State::HunkPlus,
-                vec![
-                    (plus.as_str(), "(66666666, 66666666, 66666666)"),
-                    (paint::ANSI_SGR_RESET, ""),
-                ],
+                vec![(plus.as_str(), "(66666666, 66666666, 66666666)")],
             ),
         ];
 
