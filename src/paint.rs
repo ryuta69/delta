@@ -64,28 +64,16 @@ impl<'a> Painter<'a> {
     }
 
     pub fn paint_buffered_lines(&mut self) {
-        let minus_fixed_foreground_style = self.get_fixed_foreground_style(
-            self.config.minus_foreground_style_modifier,
-            self.config
-                .lines_to_be_syntax_highlighted
-                .contains(State::HunkMinus as usize),
-        );
-        let plus_fixed_foreground_style = self.get_fixed_foreground_style(
-            self.config.plus_foreground_style_modifier,
-            self.config
-                .lines_to_be_syntax_highlighted
-                .contains(State::HunkPlus as usize),
-        );
         let minus_line_syntax_style_sections = Self::get_syntax_style_sections_for_lines(
             &self.minus_lines,
+            &State::HunkMinus,
             &mut self.highlighter,
-            minus_fixed_foreground_style,
             self.config,
         );
         let plus_line_syntax_style_sections = Self::get_syntax_style_sections_for_lines(
             &self.plus_lines,
+            &State::HunkPlus,
             &mut self.highlighter,
-            plus_fixed_foreground_style,
             self.config,
         );
         let (minus_line_diff_style_sections, plus_line_diff_style_sections) =
@@ -115,22 +103,6 @@ impl<'a> Painter<'a> {
         }
         self.minus_lines.clear();
         self.plus_lines.clear();
-    }
-
-    fn get_fixed_foreground_style(
-        &self,
-        foreground_style_modifier: Option<StyleModifier>,
-        should_syntax_highlight: bool,
-    ) -> Option<Style> {
-        match (
-            foreground_style_modifier,
-            should_syntax_highlight,
-            self.config.theme,
-        ) {
-            (Some(style_modifier), _, _) => Some(self.config.no_style.apply(style_modifier)),
-            (_, true, Some(_)) => None,
-            _ => Some(self.config.no_style),
-        }
     }
 
     /// Superimpose background styles and foreground syntax
@@ -197,16 +169,16 @@ impl<'a> Painter<'a> {
 
     fn get_syntax_style_sections_for_lines<'s>(
         lines: &'s [String],
+        state: &State,
         highlighter: &mut HighlightLines,
-        fixed_style: Option<Style>,
         config: &config::Config,
     ) -> Vec<Vec<(Style, &'s str)>> {
         let mut line_sections = Vec::new();
         for line in lines.iter() {
             line_sections.push(Painter::get_line_syntax_style_sections(
-                &line,
+                line,
+                state,
                 highlighter,
-                fixed_style,
                 &config,
             ));
         }
@@ -215,13 +187,14 @@ impl<'a> Painter<'a> {
 
     pub fn get_line_syntax_style_sections(
         line: &'a str,
+        state: &State,
         highlighter: &mut HighlightLines,
-        fixed_style: Option<Style>,
         config: &config::Config,
     ) -> Vec<(Style, &'a str)> {
-        match fixed_style {
-            Some(fixed_style) => vec![(fixed_style, line)],
-            None => highlighter.highlight(line, &config.syntax_set),
+        if config.should_syntax_highlight(state) {
+            highlighter.highlight(line, &config.syntax_set)
+        } else {
+            vec![(config.no_style, line)]
         }
     }
 
