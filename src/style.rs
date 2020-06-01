@@ -1,6 +1,7 @@
 use std::process;
 
 use ansi_term;
+use bitflags::bitflags;
 
 use crate::cli::unreachable;
 use crate::color;
@@ -22,6 +23,14 @@ pub enum DecorationStyle {
     Overline(ansi_term::Style),
     Underoverline(ansi_term::Style),
     NoDecoration,
+}
+
+bitflags! {
+    struct DecorationAttributes: u8 {
+        const BOX = 0b00000001;
+        const OL = 0b00000010;
+        const UL = 0b00000100;
+    }
 }
 
 impl Style {
@@ -292,28 +301,28 @@ fn parse_ansi_term_style(
 
 /// If the style string contains a 'special decoration attribute' then extract it and return it
 /// along with the modified style string.
-fn extract_special_decoration_attribute(style_string: &str) -> (String, Option<String>) {
-    let style_string = style_string.to_lowercase();
-    let (special_attributes, standard_attributes): (Vec<&str>, Vec<&str>) = style_string
+fn extract_special_decoration_attribute(style_string: &str) -> (String, DecorationAttributes) {
+    let attributes = DecorationAttributes::new();
+    attributes.bits = 0;
+    let mut new_style_string = Vec::new();
+    for token in style_string
+        .to_lowercase()
         .split_whitespace()
         .map(|word| word.trim_matches(|c| c == '"' || c == '\''))
-        .partition(|&token| {
-            // TODO: This should be tied to the enum
-            token == "box"
-                || token == "ul"
-                || token == "underline"
-                || token == "overline"
-                || token == "underoverline"
-                || token == "none"
-                || token == "plain"
-        });
-    match special_attributes {
-        attrs if attrs.len() == 0 => (style_string.to_string(), None),
-        attrs => (
-            format!("{} {}", attrs[1..].join(" "), standard_attributes.join(" ")),
-            Some(attrs[0].to_string()),
-        ),
+    {
+        match token {
+            "box" => attributes |= DecorationAttributes::BOX,
+            token if token == "ol" || token == "overline" => {
+                attributes |= DecorationAttributes::OVERLINE
+            }
+            token if token == "ul" || token == "underline" => {
+                attributes |= DecorationAttributes::UNDERLINE
+            }
+            token if token == "none" || token == "plain" => {}
+            _ => new_style_string.push(token),
+        }
     }
+    (new_style_string.join(" "), attributes)
 }
 
 #[cfg(test)]
@@ -471,6 +480,18 @@ mod tests {
                 true,
                 true
             )
+        );
+    }
+
+    #[test]
+    fn test_extract_special_decoration_attribute() {
+        assert_eq!(
+            extract_special_decoration_attribute("",),
+            ("", DecorationAttributes::new())
+        );
+        assert_eq!(
+            extract_special_decoration_attribute("box",),
+            ("", DecorationAttributes::BOX)
         );
     }
 }

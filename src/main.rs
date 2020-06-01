@@ -1,4 +1,5 @@
 #[macro_use]
+extern crate bitflags;
 extern crate error_chain;
 
 mod align;
