@@ -27,9 +27,10 @@ pub enum DecorationStyle {
 
 bitflags! {
     struct DecorationAttributes: u8 {
+        const EMPTY = 0b00000000;
         const BOX = 0b00000001;
-        const OL = 0b00000010;
-        const UL = 0b00000100;
+        const OVERLINE = 0b00000010;
+        const UNDERLINE = 0b00000100;
     }
 }
 
@@ -86,8 +87,8 @@ impl Style {
         true_color: bool,
         is_emph: bool,
     ) -> Self {
-        let (style_string, special_attribute_from_style_string) =
-            extract_special_decoration_attribute(style_string);
+        let (style_string, special_attributes) =
+            extract_special_decoration_attributes(style_string);
         let mut style = Style::from_str(
             &style_string,
             foreground_default,
@@ -96,21 +97,12 @@ impl Style {
             true_color,
             is_emph,
         );
-        match special_attribute_from_style_string.as_deref() {
-            Some("none") => {
-                style.ansi_term_style = ansi_term::Style::new();
-                style
-            }
-            Some(special_attribute) => {
-                style.decoration_style = DecorationStyle::apply_special_decoration_attribute(
-                    style.decoration_style,
-                    &special_attribute,
-                    true_color,
-                );
-                style
-            }
-            _ => style,
-        }
+        DecorationStyle::apply_special_decoration_attributes(
+            &mut style,
+            special_attributes,
+            true_color,
+        );
+        style
     }
 
     /// As from_str_with_handling_of_special_decoration_attributes but respecting an optional
@@ -202,9 +194,9 @@ impl DecorationStyle {
         }
     }
 
-    fn apply_special_decoration_attribute(
-        decoration_style: DecorationStyle,
-        special_attribute: &str,
+    fn apply_special_decoration_attributes(
+        style: &mut Style,
+        special_attributes: &DecorationAttributes,
         true_color: bool,
     ) -> DecorationStyle {
         let ansi_term_style = match decoration_style {
@@ -301,9 +293,8 @@ fn parse_ansi_term_style(
 
 /// If the style string contains a 'special decoration attribute' then extract it and return it
 /// along with the modified style string.
-fn extract_special_decoration_attribute(style_string: &str) -> (String, DecorationAttributes) {
-    let attributes = DecorationAttributes::new();
-    attributes.bits = 0;
+fn extract_special_decoration_attributes(style_string: &str) -> (String, DecorationAttributes) {
+    let attributes = DecorationAttributes::EMPTY;
     let mut new_style_string = Vec::new();
     for token in style_string
         .to_lowercase()
@@ -486,12 +477,12 @@ mod tests {
     #[test]
     fn test_extract_special_decoration_attribute() {
         assert_eq!(
-            extract_special_decoration_attribute("",),
-            ("", DecorationAttributes::new())
+            extract_special_decoration_attributes(""),
+            ("", DecorationAttributes::EMPTY)
         );
         assert_eq!(
-            extract_special_decoration_attribute("box",),
-            ("", DecorationAttributes::BOX)
+            extract_special_decoration_attributes("box"),
+            ("".to_string(), DecorationAttributes::BOX)
         );
     }
 }
