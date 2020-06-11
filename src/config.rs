@@ -485,6 +485,41 @@ mod tests {
     use crate::color;
     use crate::tests::integration_test_utils::integration_test_utils;
 
+    macro_rules! check_eq {
+    ($left:expr, $right:expr) => ({
+        match (&$left, &$right) {
+            (left_val, right_val) => {
+                if !(*left_val == *right_val) {
+                    // The reborrows below are intentional. Without them, the stack slot for the
+                    // borrow is initialized even before the values are compared, leading to a
+                    // noticeable slow down.
+                    eprintln!(r#"assertion failed: `(left == right)`
+      left: `{:?}`,
+     right: `{:?}`"#, &*left_val, &*right_val)
+                    }
+                }
+            }
+        });
+        ($left:expr, $right:expr,) => ({
+            $crate::assert_eq!($left, $right)
+        });
+        ($left:expr, $right:expr, $($arg:tt)+) => ({
+            match (&($left), &($right)) {
+                (left_val, right_val) => {
+                    if !(*left_val == *right_val) {
+                        // The reborrows below are intentional. Without them, the stack slot for the
+                        // borrow is initialized even before the values are compared, leading to a
+                        // noticeable slow down.
+                        eprintln!(r#"assertion failed: `(left == right)`
+      left: `{:?}`,
+     right: `{:?}`: {}"#, &*left_val, &*right_val,
+                               $crate::format_args!($($arg)+))
+                    }
+                }
+            }
+        });
+    }
+
     #[test]
     fn test_syntax_theme_selection() {
         #[derive(Debug, PartialEq)]
@@ -568,33 +603,33 @@ mod tests {
             if syntax_theme::is_no_syntax_highlighting_theme_name(expected_syntax_theme) {
                 assert!(config.syntax_theme.is_none())
             } else {
-                assert_eq!(
+                check_eq!(
                     config.syntax_theme.unwrap().name.as_ref().unwrap(),
                     expected_syntax_theme
                 );
             }
-            assert_eq!(
+            check_eq!(
                 config.minus_style.ansi_term_style.background.unwrap(),
                 color::get_minus_background_color_default(
                     expected_mode == Mode::Light,
                     is_true_color
                 )
             );
-            assert_eq!(
+            check_eq!(
                 config.minus_emph_style.ansi_term_style.background.unwrap(),
                 color::get_minus_emph_background_color_default(
                     expected_mode == Mode::Light,
                     is_true_color
                 )
             );
-            assert_eq!(
+            check_eq!(
                 config.plus_style.ansi_term_style.background.unwrap(),
                 color::get_plus_background_color_default(
                     expected_mode == Mode::Light,
                     is_true_color
                 )
             );
-            assert_eq!(
+            check_eq!(
                 config.plus_emph_style.ansi_term_style.background.unwrap(),
                 color::get_plus_emph_background_color_default(
                     expected_mode == Mode::Light,
