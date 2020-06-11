@@ -487,7 +487,7 @@ mod tests {
 
     #[test]
     fn test_syntax_theme_selection() {
-        #[derive(PartialEq)]
+        #[derive(Debug, PartialEq)]
         enum Mode {
             Light,
             Dark,
@@ -535,6 +535,14 @@ mod tests {
             (Some("none"), "", None, "none", Mode::Dark),
             (Some("None"), "", Some(Mode::Light), "None", Mode::Light),
         ] {
+            dbg!((
+                &syntax_theme,
+                &bat_theme_env_var,
+                &mode, // (--light, --dark)
+                &expected_syntax_theme,
+                &expected_mode,
+            ));
+
             if bat_theme_env_var == "<not set>" {
                 env::remove_var("BAT_THEME")
             } else {
