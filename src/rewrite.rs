@@ -2,6 +2,7 @@
 /// 1. Express deprecated usages in the new non-deprecated form
 /// 2. Implement options such as --color-only which are defined to be equivalent to some set of
 ///    other options.
+use std::collections::HashMap;
 use std::process;
 
 use structopt::clap;
@@ -20,8 +21,6 @@ pub fn apply_rewrite_rules(
     rewrite_options_to_implement_deprecated_hunk_style_option(opt);
     rewrite_options_to_implement_deprecated_theme_option(opt, &arg_matches);
     rewrite_options_to_implement_color_only(opt);
-    rewrite_options_to_implement_diff_highlight_emulation(opt, &arg_matches, git_config);
-    rewrite_options_to_implement_diff_so_fancy_emulation(opt, &arg_matches, git_config);
     rewrite_options_to_implement_navigate(opt, &arg_matches);
 }
 
@@ -48,8 +47,8 @@ fn rewrite_options_to_honor_git_config(
         return;
     }
     // --presets must be set first
-    set_delta_options__option_string!([("presets", presets)], opt, arg_matches, git_config);
-    set_delta_options__bool!(
+    set_options__option_string!([("presets", presets)], opt, arg_matches, git_config);
+    set_options__bool!(
         [
             ("light", light),
             ("dark", dark),
@@ -62,13 +61,13 @@ fn rewrite_options_to_honor_git_config(
         arg_matches,
         git_config
     );
-    set_delta_options__f64!(
+    set_options__f64!(
         [("max-line-distance", max_line_distance)],
         opt,
         arg_matches,
         git_config
     );
-    set_delta_options__string!(
+    set_options__string!(
         [
             ("commit-decoration-style", commit_decoration_style),
             ("commit-style", commit_style),
@@ -101,134 +100,127 @@ fn rewrite_options_to_honor_git_config(
         arg_matches,
         git_config
     );
-    set_delta_options__option_string!(
+    set_options__option_string!(
         [("syntax_theme", syntax_theme), ("width", width)],
         opt,
         arg_matches,
         git_config
     );
-    set_delta_options__usize!([("tabs", tab_width)], opt, arg_matches, git_config);
+    set_options__usize!([("tabs", tab_width)], opt, arg_matches, git_config);
 }
 
-/// Implement --presets=diff-highlight
-fn rewrite_options_to_implement_diff_highlight_emulation(
-    opt: &mut cli::Opt,
-    arg_matches: &clap::ArgMatches,
-    git_config: &mut Option<git2::Config>,
-) {
-    _rewrite_options_to_implement_diff_highlight_emulation(opt, arg_matches, git_config, false)
+fn get_diff_highlight_symbolic_defaults() -> Vec<(String, String)> {
+    vec![
+        ("minus-style", "color.diff.old"),
+        ("minus-non-emph-style", "color.diff-highlight.oldNormal"),
+        ("minus-emph-style", "color.diff-highlight.oldHighlight"),
+        ("plus-style", "color.diff.new"),
+        ("plus-non-emph-style", "color.diff-highlight.newNormal"),
+        ("plus-emph-style", "color.diff-highlight.newHighlight"),
+    ]
+    .iter()
+    .map(|(k, v)| (k.to_string(), v.to_string()))
+    .collect()
 }
 
-fn _rewrite_options_to_implement_diff_highlight_emulation(
-    opt: &mut cli::Opt,
-    arg_matches: &clap::ArgMatches,
-    git_config: &mut Option<git2::Config>,
-    bold: bool,
-) {
-    if !(has_preset("diff-highlight", opt.presets.as_deref())
-        || has_preset("diff-so-fancy", opt.presets.as_deref()))
-    {
-        return;
-    }
-    set_options__string!(
+fn get_diff_highlight_defaults(opt: &cli::Opt) -> Vec<(String, String)> {
+    _get_diff_highlight_defaults(opt, false)
+}
+
+fn _get_diff_highlight_defaults(opt: &cli::Opt, bold: bool) -> Vec<(String, String)> {
+    vec![
+        ("minus-style", if bold { "bold red" } else { "red" }),
+        ("minus-non-emph-style", &opt.minus_style),
+        ("minus-emph-style", &format!("{} reverse", opt.minus_style)),
+        ("zero-style", "normal"),
+        ("plus-style", if bold { "bold green" } else { "green" }),
+        ("plus-non-emph-style", &opt.plus_style),
+        ("plus-emph-style", &format!("{} reverse", opt.plus_style)),
+    ]
+    .iter()
+    .map(|(k, v)| (k.to_string(), v.to_string()))
+    .collect()
+}
+
+fn get_diff_so_fancy_symbolic_defaults() -> Vec<(String, String)> {
+    let mut defaults = get_diff_highlight_symbolic_defaults();
+    defaults.extend(
         [
-            (
-                "minus-style",
-                minus_style,
-                vec!["color.diff.old".to_string()],
-                if bold { "bold red" } else { "red" }
-            ),
-            (
-                "minus-non-emph-style",
-                minus_non_emph_style,
-                vec!["color.diff-highlight.oldNormal".to_string()],
-                &opt.minus_style
-            ),
-            (
-                "minus-emph-style",
-                minus_emph_style,
-                vec!["color.diff-highlight.oldHighlight".to_string()],
-                &format!("{} reverse", opt.minus_style)
-            ),
-            ("zero-style", zero_style, vec![], "normal"),
-            (
-                "plus-style",
-                plus_style,
-                vec!["color.diff.new".to_string()],
-                if bold { "bold green" } else { "green" }
-            ),
-            (
-                "plus-non-emph-style",
-                plus_non_emph_style,
-                vec!["color.diff-highlight.newNormal".to_string()],
-                &opt.plus_style
-            ),
-            (
-                "plus-emph-style",
-                plus_emph_style,
-                vec!["color.diff-highlight.newHighlight".to_string()],
-                &format!("{} reverse", opt.plus_style)
-            )
-        ],
-        opt,
-        arg_matches,
-        git_config
+            ("commit-style", ""),
+            ("file-style", "color.diff.meta"),
+            ("hunk-header-style", "color.diff.frag"),
+        ]
+        .iter()
+        .map(|(k, v)| (k.to_string(), v.to_string())),
     );
+    defaults
 }
 
-/// Implement --presets=diff-so-fancy
-fn rewrite_options_to_implement_diff_so_fancy_emulation(
-    opt: &mut cli::Opt,
-    arg_matches: &clap::ArgMatches,
-    git_config: &mut Option<git2::Config>,
-) {
-    if !has_preset("diff-so-fancy", opt.presets.as_deref()) {
-        return;
-    }
-    _rewrite_options_to_implement_diff_highlight_emulation(opt, arg_matches, git_config, true);
-    set_options__string!(
+fn get_diff_so_fancy_defaults(opt: &cli::Opt) -> Vec<(String, String)> {
+    let mut defaults = _get_diff_highlight_defaults(opt, true);
+    defaults.extend(
         [
-            (
-                "commit-style",
-                commit_style,
-                vec!["color.diff.commit".to_string()],
-                "bold yellow"
-            ),
-            (
-                "file-style",
-                file_style,
-                vec!["color.diff.meta".to_string()],
-                "11"
-            ),
-            (
-                "hunk-header-style",
-                hunk_header_style,
-                vec!["color.diff.frag".to_string()],
-                "bold syntax"
-            ),
-            (
-                "commit-decoration-style",
-                commit_decoration_style,
-                vec![],
-                "none"
-            ),
-            (
-                "file-decoration-style",
-                file_decoration_style,
-                vec![],
-                "bold yellow ul ol"
-            ),
-            (
-                "hunk-header-decoration-style",
-                hunk_header_decoration_style,
-                vec![],
-                "magenta box"
-            )
-        ],
-        opt,
-        arg_matches,
-        git_config
+            ("commit-style", "bold yellow"),
+            ("file-style", "11"),
+            ("hunk-header-style", "bold syntax"),
+            ("commit-decoration-style", "none"),
+            ("file-decoration-style", "bold yellow ul ol"),
+            ("hunk-header-decoration-style", "magenta box"),
+        ]
+        .iter()
+        .map(|(k, v)| (k.to_string(), v.to_string())),
     );
+    defaults
+}
+
+/// Construct a map of preset names to a map of "symbolic defaults". Each map of symbolic defaults
+/// is a map from a delta option name to a git config key name whose value should be used for that
+/// delta option.
+pub fn get_preset_symbolic_defaults() -> HashMap<String, HashMap<String, String>> {
+    // TODO: unnecessary allocations
+    [
+        (
+            "diff-highlight".to_string(),
+            get_diff_highlight_symbolic_defaults()
+                .iter()
+                .map(|x| x.clone())
+                .collect(),
+        ),
+        (
+            "diff-so-fancy".to_string(),
+            get_diff_so_fancy_symbolic_defaults()
+                .iter()
+                .map(|x| x.clone())
+                .collect(),
+        ),
+    ]
+    .iter()
+    .map(|x| x.clone())
+    .collect()
+}
+
+// Currently there is no need for non-String preset defaults. If that were needed this function
+// could become generic over the type of the values of the inner hash map.
+pub fn get_preset_defaults(opt: &cli::Opt) -> HashMap<String, HashMap<String, String>> {
+    [
+        (
+            "diff-highlight".to_string(),
+            get_diff_highlight_defaults(opt)
+                .iter()
+                .map(|x| x.clone())
+                .collect(),
+        ),
+        (
+            "diff-so-fancy".to_string(),
+            get_diff_so_fancy_defaults(opt)
+                .iter()
+                .map(|x| x.clone())
+                .collect(),
+        ),
+    ]
+    .iter()
+    .map(|x| x.clone())
+    .collect()
 }
 
 /// Implement --navigate
@@ -410,13 +402,6 @@ fn _get_rewritten_minus_plus_style_string(
     }
 }
 
-fn has_preset(preset: &str, presets: Option<&str>) -> bool {
-    match presets.map(str::to_lowercase).as_deref() {
-        Some(presets) => presets.split_whitespace().any(|s| s == preset),
-        None => false,
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use std::ffi::OsString;
@@ -424,19 +409,7 @@ mod tests {
     use structopt::{clap, StructOpt};
 
     use crate::cli;
-    use crate::rewrite::{apply_rewrite_rules, has_preset};
-
-    #[test]
-    fn test_has_preset() {
-        assert!(!has_preset("a", Some("")));
-        assert!(has_preset("a", Some("a")));
-        assert!(has_preset("a", Some("a b")));
-        assert!(has_preset("b", Some("a b")));
-        assert!(has_preset(
-            "diff-so-fancy",
-            Some("diff-so-fancy some-other-preset")
-        ));
-    }
+    use crate::rewrite::apply_rewrite_rules;
 
     #[test]
     fn test_default_is_stable_under_rewrites() {

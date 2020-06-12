@@ -1,168 +1,83 @@
-// TODO: Add tests and parameterize over types more cleanly.
+use crate::rewrite;
 
 #[macro_use]
 mod set_options {
-    /// If `opt_name` was not supplied on the command line, then change its value to one of the
-    /// following in order of precedence:
-    /// 1. The entry for it in the section of gitconfig corresponding to the active presets (if
-    ///    presets disagree over an option value, the preset named last in the presets string has
-    ///    priority).
-    /// 2. The entry for it in the main delta section of gitconfig, if there is one.
-    /// 3. The default value passed to this macro (which may be the current value).
+    // set_options<T> implementations
 
     macro_rules! set_options__string {
-        ([$( ($opt_name:expr, $field_ident:ident, $keys:expr, $default:expr) ),* ],
+	    ([$( ($option_name:expr, $field_ident:ident) ),* ],
          $opt:expr, $arg_matches:expr, $git_config:expr) => {
             $(
-                if !$crate::config::user_supplied_option($opt_name, $arg_matches) {
+                let keys = $crate::gitconfig::make_git_config_keys($option_name, $opt.presets.as_deref());
+                if !$crate::config::user_supplied_option($option_name, $arg_matches) {
                     $opt.$field_ident =
-                        $crate::gitconfig::git_config_get::_string($keys, $git_config)
-                        .unwrap_or_else(|| $default.to_string());
+                        $crate::gitconfig::git_config_get::_string(keys, $git_config)
+                        .unwrap_or_else(|| $crate::gitconfig::get_default::_string($option_name, &$opt)
+                                           .unwrap_or_else(|| $opt.$field_ident.clone()));
                 };
             )*
-        };
+	    };
     }
 
     macro_rules! set_options__option_string {
-        ([$( ($opt_name:expr, $field_ident:ident, $keys:expr, $default:expr) ),* ],
+	    ([$( ($option_name:expr, $field_ident:ident) ),* ],
          $opt:expr, $arg_matches:expr, $git_config:expr) => {
             $(
-                if !$crate::config::user_supplied_option($opt_name, $arg_matches) {
-                    $opt.$field_ident = $crate::gitconfig::git_config_get::_string($keys, $git_config)
-                                        .or_else(|| $default.map(str::to_string));
+                let keys = $crate::gitconfig::make_git_config_keys($option_name, $opt.presets.as_deref());
+                if !$crate::config::user_supplied_option($option_name, $arg_matches) {
+                    $opt.$field_ident = $crate::gitconfig::git_config_get::_string(keys, $git_config)
+                                        .or_else(|| $crate::gitconfig::get_default::_string($option_name, &$opt)
+                                                    .or_else(|| $opt.$field_ident.as_deref().map(str::to_string)));
                 };
             )*
-        };
+	    };
     }
 
     macro_rules! set_options__bool {
-        ([$( ($opt_name:expr, $field_ident:ident, $keys:expr, $default:expr) ),* ],
+	    ([$( ($option_name:expr, $field_ident:ident) ),* ],
          $opt:expr, $arg_matches:expr, $git_config:expr) => {
             $(
-                if !$crate::config::user_supplied_option($opt_name, $arg_matches) {
+                let keys = $crate::gitconfig::make_git_config_keys($option_name, $opt.presets.as_deref());
+                if !$crate::config::user_supplied_option($option_name, $arg_matches) {
                     $opt.$field_ident =
-                        $crate::gitconfig::git_config_get::_bool($keys, $git_config)
-                        .unwrap_or_else(|| $default);
+                        $crate::gitconfig::git_config_get::_bool(keys, $git_config)
+                        .unwrap_or_else(|| $crate::gitconfig::get_default::_bool($option_name, &$opt)
+                                           .unwrap_or($opt.$field_ident));
                 };
             )*
-        };
+	    };
     }
 
     macro_rules! set_options__f64 {
-        ([$( ($opt_name:expr, $field_ident:ident, $keys:expr, $default:expr) ),* ],
+	    ([$( ($option_name:expr, $field_ident:ident) ),* ],
          $opt:expr, $arg_matches:expr, $git_config:expr) => {
             $(
-                if !$crate::config::user_supplied_option($opt_name, $arg_matches) {
-                    $opt.$field_ident = match $crate::gitconfig::git_config_get::_string($keys, $git_config) {
-                        Some(s) => s.parse::<f64>().unwrap_or($default),
-                        None => $default,
+                let keys = $crate::gitconfig::make_git_config_keys($option_name, $opt.presets.as_deref());
+                if !$crate::config::user_supplied_option($option_name, $arg_matches) {
+                    let get_default = || $crate::gitconfig::get_default::_f64($option_name, &$opt)
+                                         .unwrap_or($opt.$field_ident);
+                    $opt.$field_ident = match $crate::gitconfig::git_config_get::_string(keys, $git_config) {
+                        Some(s) => s.parse::<f64>().unwrap_or_else(|_| get_default()),
+                        None => get_default(),
                     }
                 };
             )*
-        };
+	    };
     }
 
     macro_rules! set_options__usize {
-        ([$( ($opt_name:expr, $field_ident:ident, $keys:expr, $default:expr) ),* ],
+	    ([$( ($option_name:expr, $field_ident:ident) ),* ],
          $opt:expr, $arg_matches:expr, $git_config:expr) => {
             $(
-                if !$crate::config::user_supplied_option($opt_name, $arg_matches) {
-                    $opt.$field_ident = match $crate::gitconfig::git_config_get::_i64($keys, $git_config) {
+                let keys = $crate::gitconfig::make_git_config_keys($option_name, $opt.presets.as_deref());
+                if !$crate::config::user_supplied_option($option_name, $arg_matches) {
+                    $opt.$field_ident = match $crate::gitconfig::git_config_get::_i64(keys, $git_config) {
                         Some(int) => int as usize,
-                        None => $default,
+                        None => $crate::gitconfig::get_default::_usize($option_name, &$opt)
+                                .unwrap_or($opt.$field_ident),
                     }
                 };
             )*
-        };
-    }
-}
-
-#[macro_use]
-mod set_delta_options {
-    // set_delta_options<T> implementations
-
-    macro_rules! set_delta_options__string {
-	    ([$( ($option_name:expr, $field_ident:ident) ),* ],
-         $opt:expr, $arg_matches:expr, $git_config:expr) => {
-		    set_options__string!([
-                $(
-                    ($option_name,
-                     $field_ident,
-                     $crate::gitconfig::make_git_config_keys_for_delta($option_name, $opt.presets.as_deref()),
-                     &$opt.$field_ident)
-                ),*
-            ],
-            $opt,
-            $arg_matches,
-            $git_config);
-	    };
-    }
-
-    macro_rules! set_delta_options__option_string {
-	    ([$( ($option_name:expr, $field_ident:ident) ),* ],
-         $opt:expr, $arg_matches:expr, $git_config:expr) => {
-		    set_options__option_string!([
-                $(
-                    ($option_name,
-                     $field_ident,
-                     $crate::gitconfig::make_git_config_keys_for_delta($option_name, $opt.presets.as_deref()),
-                     $opt.$field_ident.as_deref())
-                ),*
-            ],
-            $opt,
-            $arg_matches,
-            $git_config);
-	    };
-    }
-
-    macro_rules! set_delta_options__bool {
-	    ([$( ($option_name:expr, $field_ident:ident) ),* ],
-         $opt:expr, $arg_matches:expr, $git_config:expr) => {
-		    set_options__bool!([
-                $(
-                    ($option_name,
-                     $field_ident,
-                     $crate::gitconfig::make_git_config_keys_for_delta($option_name, $opt.presets.as_deref()),
-                     $opt.$field_ident)
-                ),*
-            ],
-            $opt,
-            $arg_matches,
-            $git_config);
-	    };
-    }
-
-    macro_rules! set_delta_options__f64 {
-	    ([$( ($option_name:expr, $field_ident:ident) ),* ],
-         $opt:expr, $arg_matches:expr, $git_config:expr) => {
-		    set_options__f64!([
-                $(
-                    ($option_name,
-                     $field_ident,
-                     $crate::gitconfig::make_git_config_keys_for_delta($option_name, $opt.presets.as_deref()),
-                     $opt.$field_ident)
-                ),*
-            ],
-            $opt,
-            $arg_matches,
-            $git_config);
-	    };
-    }
-
-    macro_rules! set_delta_options__usize {
-	    ([$( ($option_name:expr, $field_ident:ident) ),* ],
-         $opt:expr, $arg_matches:expr, $git_config:expr) => {
-		    set_options__usize!([
-                $(
-                    ($option_name,
-                     $field_ident,
-                     $crate::gitconfig::make_git_config_keys_for_delta($option_name, $opt.presets.as_deref()),
-                     $opt.$field_ident)
-                ),*
-            ],
-            $opt,
-            $arg_matches,
-            $git_config);
 	    };
     }
 }
@@ -204,17 +119,58 @@ pub mod git_config_get {
     }
 }
 
-pub fn make_git_config_keys_for_delta(key: &str, presets: Option<&str>) -> Vec<String> {
+pub fn make_git_config_keys(key: &str, presets: Option<&str>) -> Vec<String> {
     match presets {
         Some(presets) => {
+            let preset_symbolic_defaults = rewrite::get_preset_symbolic_defaults();
             let mut keys = Vec::new();
             for preset in presets.split_whitespace().rev() {
+                // A delta key for this preset has precedence over a preset default.
                 keys.push(format!("delta.{}.{}", preset, key));
+                if let Some(defaults) = preset_symbolic_defaults.get(preset) {
+                    if let Some(key) = defaults.get(key) {
+                        keys.push(key.to_string());
+                    }
+                }
             }
             keys.push(format!("delta.{}", key));
             keys
         }
         None => vec![format!("delta.{}", key)],
+    }
+}
+
+pub mod get_default {
+    use crate::cli;
+    use crate::rewrite;
+
+    pub fn _string(option_name: &str, opt: &cli::Opt) -> Option<String> {
+        match &opt.presets {
+            Some(presets) => {
+                let preset_defaults = rewrite::get_preset_defaults(&opt);
+                for preset in presets.split_whitespace().rev() {
+                    if let Some(defaults) = preset_defaults.get(preset) {
+                        if let Some(value) = defaults.get(option_name) {
+                            return Some(value.to_string());
+                        }
+                    }
+                }
+                None
+            }
+            None => None,
+        }
+    }
+
+    pub fn _bool(_option_name: &str, _opt: &cli::Opt) -> Option<bool> {
+        None // bool preset defaults not needed yet
+    }
+
+    pub fn _f64(_option_name: &str, _opt: &cli::Opt) -> Option<f64> {
+        None // f64 preset defaults not needed yet
+    }
+
+    pub fn _usize(_option_name: &str, _opt: &cli::Opt) -> Option<usize> {
+        None // usize preset defaults not needed yet
     }
 }
 
