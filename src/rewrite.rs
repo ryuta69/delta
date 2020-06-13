@@ -79,9 +79,11 @@ fn rewrite_options_to_honor_git_config(
             ("file-style", file_style),
             ("hunk-header-decoration-style", hunk_header_decoration_style),
             ("hunk-header-style", hunk_header_style),
+            // Hack: minus-style must come before minus-*emph-style because the latter default
+            // dynamically to the value of the former.
+            ("minus-style", minus_style),
             ("minus-emph-style", minus_emph_style),
             ("minus-non-emph-style", minus_non_emph_style),
-            ("minus-style", minus_style),
             ("number-minus-format", number_minus_format),
             ("number-minus-format-style", number_minus_format_style),
             ("number-minus-style", number_minus_style),
@@ -89,9 +91,11 @@ fn rewrite_options_to_honor_git_config(
             ("number-plus-format-style", number_plus_format_style),
             ("number-plus-style", number_plus_style),
             ("paging-mode", paging_mode),
+            // Hack: plus-style must come before plus-*emph-style because the latter default
+            // dynamically to the value of the former.
+            ("plus-style", plus_style),
             ("plus-emph-style", plus_emph_style),
             ("plus-non-emph-style", plus_non_emph_style),
-            ("plus-style", plus_style),
             ("true-color", true_color),
             ("word-diff-regex", tokenization_regex),
             ("zero-style", zero_style)
