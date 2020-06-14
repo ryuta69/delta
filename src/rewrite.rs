@@ -2,7 +2,6 @@
 /// 1. Express deprecated usages in the new non-deprecated form
 /// 2. Implement options such as --color-only which are defined to be equivalent to some set of
 ///    other options.
-use std::collections::HashMap;
 use std::process;
 
 use structopt::clap;
@@ -111,120 +110,6 @@ fn rewrite_options_to_honor_git_config(
         git_config
     );
     set_options__usize!([("tabs", tab_width)], opt, arg_matches, git_config);
-}
-
-fn get_diff_highlight_symbolic_defaults() -> Vec<(String, String)> {
-    vec![
-        ("minus-style", "color.diff.old"),
-        ("minus-non-emph-style", "color.diff-highlight.oldNormal"),
-        ("minus-emph-style", "color.diff-highlight.oldHighlight"),
-        ("plus-style", "color.diff.new"),
-        ("plus-non-emph-style", "color.diff-highlight.newNormal"),
-        ("plus-emph-style", "color.diff-highlight.newHighlight"),
-    ]
-    .iter()
-    .map(|(k, v)| (k.to_string(), v.to_string()))
-    .collect()
-}
-
-fn get_diff_highlight_defaults(opt: &cli::Opt) -> Vec<(String, String)> {
-    _get_diff_highlight_defaults(opt, false)
-}
-
-fn _get_diff_highlight_defaults(opt: &cli::Opt, bold: bool) -> Vec<(String, String)> {
-    vec![
-        ("minus-style", if bold { "bold red" } else { "red" }),
-        ("minus-non-emph-style", &opt.minus_style),
-        ("minus-emph-style", &format!("{} reverse", opt.minus_style)),
-        ("zero-style", "normal"),
-        ("plus-style", if bold { "bold green" } else { "green" }),
-        ("plus-non-emph-style", &opt.plus_style),
-        ("plus-emph-style", &format!("{} reverse", opt.plus_style)),
-    ]
-    .iter()
-    .map(|(k, v)| (k.to_string(), v.to_string()))
-    .collect()
-}
-
-fn get_diff_so_fancy_symbolic_defaults() -> Vec<(String, String)> {
-    let mut defaults = get_diff_highlight_symbolic_defaults();
-    defaults.extend(
-        [
-            ("commit-style", ""),
-            ("file-style", "color.diff.meta"),
-            ("hunk-header-style", "color.diff.frag"),
-        ]
-        .iter()
-        .map(|(k, v)| (k.to_string(), v.to_string())),
-    );
-    defaults
-}
-
-fn get_diff_so_fancy_defaults(opt: &cli::Opt) -> Vec<(String, String)> {
-    let mut defaults = _get_diff_highlight_defaults(opt, true);
-    defaults.extend(
-        [
-            ("commit-style", "bold yellow"),
-            ("file-style", "11"),
-            ("hunk-header-style", "bold syntax"),
-            ("commit-decoration-style", "none"),
-            ("file-decoration-style", "bold yellow ul ol"),
-            ("hunk-header-decoration-style", "magenta box"),
-        ]
-        .iter()
-        .map(|(k, v)| (k.to_string(), v.to_string())),
-    );
-    defaults
-}
-
-/// Construct a map of preset names to a map of "symbolic defaults". Each map of symbolic defaults
-/// is a map from a delta option name to a git config key name whose value should be used for that
-/// delta option.
-pub fn get_preset_symbolic_defaults() -> HashMap<String, HashMap<String, String>> {
-    // TODO: unnecessary allocations
-    [
-        (
-            "diff-highlight".to_string(),
-            get_diff_highlight_symbolic_defaults()
-                .iter()
-                .map(|x| x.clone())
-                .collect(),
-        ),
-        (
-            "diff-so-fancy".to_string(),
-            get_diff_so_fancy_symbolic_defaults()
-                .iter()
-                .map(|x| x.clone())
-                .collect(),
-        ),
-    ]
-    .iter()
-    .map(|x| x.clone())
-    .collect()
-}
-
-// Currently there is no need for non-String preset defaults. If that were needed this function
-// could become generic over the type of the values of the inner hash map.
-pub fn get_preset_defaults(opt: &cli::Opt) -> HashMap<String, HashMap<String, String>> {
-    [
-        (
-            "diff-highlight".to_string(),
-            get_diff_highlight_defaults(opt)
-                .iter()
-                .map(|x| x.clone())
-                .collect(),
-        ),
-        (
-            "diff-so-fancy".to_string(),
-            get_diff_so_fancy_defaults(opt)
-                .iter()
-                .map(|x| x.clone())
-                .collect(),
-        ),
-    ]
-    .iter()
-    .map(|x| x.clone())
-    .collect()
 }
 
 /// Implement --navigate
