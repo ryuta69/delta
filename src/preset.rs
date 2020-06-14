@@ -2,13 +2,37 @@ use std::collections::HashMap;
 
 use crate::cli;
 
-type PresetValueFunction = Box<dyn Fn(&cli::Opt, &Option<git2::Config>) -> String>;
-pub type BuiltinPreset = HashMap<String, PresetValueFunction>;
+type PresetValueFunction<T> = Box<dyn Fn(&cli::Opt, &Option<git2::Config>) -> T>;
+pub type BuiltinPreset<T> = HashMap<String, PresetValueFunction<T>>;
+
+pub trait GetValueFunctionFromBuiltinPreset {
+    fn get_value_function_from_builtin_preset<'a>(
+        _option_name: &str,
+        _builtin_preset: &'a BuiltinPreset<String>,
+    ) -> Option<&'a PresetValueFunction<Self>>
+    where
+        Self: Sized,
+    {
+        None
+    }
+}
+
+impl GetValueFunctionFromBuiltinPreset for String {
+    fn get_value_function_from_builtin_preset<'a>(
+        option_name: &str,
+        builtin_preset: &'a BuiltinPreset<String>,
+    ) -> Option<&'a PresetValueFunction<String>> {
+        builtin_preset.get(option_name)
+    }
+}
+
+impl GetValueFunctionFromBuiltinPreset for bool {}
+impl GetValueFunctionFromBuiltinPreset for i64 {}
 
 // Construct a 2-level hash map: (preset name) -> (option name) -> (value function). A value
 // function is a function that takes an Opt struct, and a git Config struct, and returns the value
-// for the option..
-pub fn make_builtin_presets() -> HashMap<String, BuiltinPreset> {
+// for the option.
+pub fn make_builtin_presets() -> HashMap<String, BuiltinPreset<String>> {
     vec![
         (
             "diff-highlight".to_string(),
@@ -23,7 +47,7 @@ pub fn make_builtin_presets() -> HashMap<String, BuiltinPreset> {
     .collect()
 }
 
-fn _make_diff_highlight_preset<'a>(bold: bool) -> Vec<(String, PresetValueFunction)> {
+fn _make_diff_highlight_preset<'a>(bold: bool) -> Vec<(String, PresetValueFunction<String>)> {
     vec![
         (
             "minus-style".to_string(),
@@ -100,11 +124,11 @@ fn _make_diff_highlight_preset<'a>(bold: bool) -> Vec<(String, PresetValueFuncti
     ]
 }
 
-fn make_diff_highlight_preset() -> Vec<(String, PresetValueFunction)> {
+fn make_diff_highlight_preset() -> Vec<(String, PresetValueFunction<String>)> {
     _make_diff_highlight_preset(false)
 }
 
-fn make_diff_so_fancy_preset() -> Vec<(String, PresetValueFunction)> {
+fn make_diff_so_fancy_preset() -> Vec<(String, PresetValueFunction<String>)> {
     let mut preset = _make_diff_highlight_preset(true);
     preset.push((
         "commit-style".to_string(),

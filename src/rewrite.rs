@@ -8,6 +8,7 @@ use structopt::clap;
 
 use crate::cli;
 use crate::config::user_supplied_option;
+use crate::gitconfig::GetOptionValue;
 
 pub fn apply_rewrite_rules(
     opt: &mut cli::Opt,
