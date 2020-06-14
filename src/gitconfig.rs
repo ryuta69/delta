@@ -1,4 +1,106 @@
-use crate::rewrite;
+use std::collections::HashMap;
+use std::process;
+
+use crate::cli;
+use crate::preset;
+
+pub fn get_option_value__string(
+    option_name: &str,
+    builtin_presets: HashMap<String, preset::BuiltinPreset>,
+    opt: &cli::Opt,
+    git_config: &mut Option<git2::Config>,
+) -> Option<String> {
+    match opt.presets.as_deref().map(str::to_lowercase) {
+        Some(presets) => {
+            for preset in presets.split_whitespace().rev() {
+                if let Some(value) = get_option_value_for_preset__string(
+                    option_name,
+                    &preset,
+                    &builtin_presets,
+                    opt,
+                    git_config,
+                ) {
+                    return Some(value);
+                }
+            }
+            None
+        }
+        None => None,
+    }
+}
+
+// If the value for option name n was not supplied on the command line, then a search is performed
+// of the following locations in the order specified, and the first value encountered is used:
+// 1. The value of n under p interpreted as a user-supplied preset (i.e. git config value delta.$p.$n)
+// 2. The value for n under p interpreted as a builtin preset
+// 3. The value for n in the main git config section for delta (i.e. git config value delta.$n)
+fn get_option_value_for_preset__string(
+    option_name: &str,
+    preset: &str,
+    builtin_presets: &HashMap<String, preset::BuiltinPreset>,
+    opt: &cli::Opt,
+    git_config: &mut Option<git2::Config>,
+) -> Option<String> {
+    if let Some(git_config) = git_config {
+        let git_config = git_config.snapshot().unwrap_or_else(|err| {
+            eprintln!("Failed to read git config: {}", err);
+            process::exit(1)
+        });
+        if let Some(value) =
+            git_config_get_2::<String>(&format!("delta.{}.{}", preset, option_name), git_config)
+        {
+            return Some(value);
+        }
+    }
+    if let Some(builtin_preset) = builtin_presets.get(preset) {
+        if let Some(value_function) = builtin_preset.get(option_name) {
+            return Some(value_function(opt, &git_config));
+        }
+    }
+    if let Some(git_config) = git_config {
+        let git_config = git_config.snapshot().unwrap_or_else(|err| {
+            eprintln!("Failed to read git config: {}", err);
+            process::exit(1)
+        });
+        if let Some(value) =
+            git_config_get_2::<String>(&format!("delta.{}", option_name), git_config)
+        {
+            return Some(value);
+        }
+    }
+    return None;
+}
+
+trait GitConfigGet {
+    fn git_config_get(key: &str, git_config: &git2::Config) -> Option<Self>
+    where
+        Self: Sized;
+}
+
+impl GitConfigGet for String {
+    fn git_config_get(key: &str, git_config: &git2::Config) -> Option<Self> {
+        git_config.get_string(key).ok()
+    }
+}
+
+impl GitConfigGet for bool {
+    fn git_config_get(key: &str, git_config: &git2::Config) -> Option<Self> {
+        git_config.get_bool(key).ok()
+    }
+}
+
+impl GitConfigGet for i64 {
+    fn git_config_get(key: &str, git_config: &git2::Config) -> Option<Self> {
+        git_config.get_i64(key).ok()
+    }
+}
+
+fn git_config_get_2<T>(key: &str, git_config: git2::Config) -> Option<T>
+where
+    T: GitConfigGet,
+{
+    T::git_config_get(key, &git_config)
+}
 
 #[macro_use]
 mod set_options {
@@ -8,12 +110,11 @@ mod set_options {
 	    ([$( ($option_name:expr, $field_ident:ident) ),* ],
          $opt:expr, $arg_matches:expr, $git_config:expr) => {
             $(
-                let keys = $crate::gitconfig::make_git_config_keys($option_name, $opt.presets.as_deref());
-                if !$crate::config::user_supplied_option($option_name, $arg_matches) {
-                    $opt.$field_ident =
-                        $crate::gitconfig::git_config_get::_string(keys, $git_config)
-                        .unwrap_or_else(|| $crate::gitconfig::get_default::_string($option_name, &$opt)
-                                           .unwrap_or_else(|| $opt.$field_ident.clone()));
+                let builtin_presets = $crate::preset::make_builtin_presets();
+                 if !$crate::config::user_supplied_option($option_name, $arg_matches) {
+                    if let Some(value) = $crate::gitconfig::get_option_value__string($option_name, builtin_presets, $opt, $git_config) {
+                        $opt.$field_ident = value;
+                    }
                 };
             )*
 	    };
@@ -119,46 +220,15 @@ pub mod git_config_get {
     }
 }
 
-pub fn make_git_config_keys(key: &str, presets: Option<&str>) -> Vec<String> {
-    match presets {
-        Some(presets) => {
-            let preset_symbolic_defaults = rewrite::get_preset_symbolic_defaults();
-            let mut keys = Vec::new();
-            for preset in presets.split_whitespace().rev() {
-                // A delta key for this preset has precedence over a preset default.
-                keys.push(format!("delta.{}.{}", preset, key));
-                if let Some(defaults) = preset_symbolic_defaults.get(preset) {
-                    if let Some(key) = defaults.get(key) {
-                        keys.push(key.to_string());
-                    }
-                }
-            }
-            keys.push(format!("delta.{}", key));
-            keys
-        }
-        None => vec![format!("delta.{}", key)],
-    }
+pub fn make_git_config_keys(key: &str, _presets: Option<&str>) -> Vec<String> {
+    vec![format!("delta.{}", key)]
 }
 
 pub mod get_default {
     use crate::cli;
-    use crate::rewrite;
 
-    pub fn _string(option_name: &str, opt: &cli::Opt) -> Option<String> {
-        match &opt.presets {
-            Some(presets) => {
-                let preset_defaults = rewrite::get_preset_defaults(&opt);
-                for preset in presets.split_whitespace().rev() {
-                    if let Some(defaults) = preset_defaults.get(preset) {
-                        if let Some(value) = defaults.get(option_name) {
-                            return Some(value.to_string());
-                        }
-                    }
-                }
-                None
-            }
-            None => None,
-        }
+    pub fn _string(_option_name: &str, _opt: &cli::Opt) -> Option<String> {
+        None
     }
 
     pub fn _bool(_option_name: &str, _opt: &cli::Opt) -> Option<bool> {

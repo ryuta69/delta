@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::cli;
 
 type PresetValueFunction = Box<dyn Fn(&cli::Opt, &Option<git2::Config>) -> String>;
-type BuiltinPreset = HashMap<String, PresetValueFunction>;
+pub type BuiltinPreset = HashMap<String, PresetValueFunction>;
 
 // Construct a 2-level hash map: (preset name) -> (option name) -> (value function). A value
 // function is a function that takes an Opt struct, and a git Config struct, and returns the value
@@ -28,7 +28,7 @@ fn _make_diff_highlight_preset<'a>(bold: bool) -> Vec<(String, PresetValueFuncti
     vec![
         (
             "minus-style".to_string(),
-            Box::new(|opt: &cli::Opt, git_config: &Option<git2::Config>| {
+            Box::new(move |_opt: &cli::Opt, git_config: &Option<git2::Config>| {
                 match git_config {
                     Some(git_config) => git_config.get_string("color.diff.old").ok(),
                     None => None,
@@ -45,7 +45,7 @@ fn _make_diff_highlight_preset<'a>(bold: bool) -> Vec<(String, PresetValueFuncti
                     }
                     None => None,
                 }
-                .unwrap_or_else(|| opt.minus_style)
+                .unwrap_or_else(|| opt.minus_style.clone())
             }),
         ),
         (
@@ -62,11 +62,11 @@ fn _make_diff_highlight_preset<'a>(bold: bool) -> Vec<(String, PresetValueFuncti
         ),
         (
             "zero-style".to_string(),
-            Box::new(|opt: &cli::Opt, git_config: &Option<git2::Config>| "normal".to_string()),
+            Box::new(|_opt: &cli::Opt, _git_config: &Option<git2::Config>| "normal".to_string()),
         ),
         (
             "plus-style".to_string(),
-            Box::new(|opt: &cli::Opt, git_config| {
+            Box::new(move |_opt: &cli::Opt, git_config: &Option<git2::Config>| {
                 match git_config {
                     Some(git_config) => git_config.get_string("color.diff.new").ok(),
                     None => None,
@@ -83,7 +83,7 @@ fn _make_diff_highlight_preset<'a>(bold: bool) -> Vec<(String, PresetValueFuncti
                     }
                     None => None,
                 }
-                .unwrap_or_else(|| opt.plus_style)
+                .unwrap_or_else(|| opt.plus_style.clone())
             }),
         ),
         (
@@ -109,15 +109,15 @@ fn make_diff_so_fancy_preset() -> Vec<(String, PresetValueFunction)> {
     let mut preset = _make_diff_highlight_preset(true);
     preset.push((
         "commit-style".to_string(),
-        Box::new(|opt: &cli::Opt, git_config: &Option<git2::Config>| "bold yellow".to_string()),
+        Box::new(|_opt: &cli::Opt, _git_config: &Option<git2::Config>| "bold yellow".to_string()),
     ));
     preset.push((
         "commit-decoration-style".to_string(),
-        Box::new(|opt: &cli::Opt, git_config: &Option<git2::Config>| "none".to_string()),
+        Box::new(|_opt: &cli::Opt, _git_config: &Option<git2::Config>| "none".to_string()),
     ));
     preset.push((
         "file-style".to_string(),
-        Box::new(|opt: &cli::Opt, git_config: &Option<git2::Config>| {
+        Box::new(|_opt: &cli::Opt, git_config: &Option<git2::Config>| {
             match git_config {
                 Some(git_config) => git_config.get_string("color.diff.meta").ok(),
                 None => None,
@@ -127,13 +127,13 @@ fn make_diff_so_fancy_preset() -> Vec<(String, PresetValueFunction)> {
     ));
     preset.push((
         "file-decoration-style".to_string(),
-        Box::new(|opt: &cli::Opt, git_config: &Option<git2::Config>| {
+        Box::new(|_opt: &cli::Opt, _git_config: &Option<git2::Config>| {
             "bold yellow ul ol".to_string()
         }),
     ));
     preset.push((
         "hunk-header-style".to_string(),
-        Box::new(|opt: &cli::Opt, git_config: &Option<git2::Config>| {
+        Box::new(|_opt: &cli::Opt, git_config: &Option<git2::Config>| {
             match git_config {
                 Some(git_config) => git_config.get_string("color.diff.frag").ok(),
                 None => None,
@@ -143,7 +143,7 @@ fn make_diff_so_fancy_preset() -> Vec<(String, PresetValueFunction)> {
     ));
     preset.push((
         "hunk-header-decoration-style".to_string(),
-        Box::new(|opt: &cli::Opt, git_config: &Option<git2::Config>| "magenta box".to_string()),
+        Box::new(|_opt: &cli::Opt, _git_config: &Option<git2::Config>| "magenta box".to_string()),
     ));
     preset
 }
