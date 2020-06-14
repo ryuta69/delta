@@ -4,6 +4,7 @@ use std::process;
 use crate::cli;
 use crate::preset;
 
+#[allow(non_snake_case)]
 pub fn get_option_value__string(
     option_name: &str,
     builtin_presets: HashMap<String, preset::BuiltinPreset>,
@@ -34,6 +35,7 @@ pub fn get_option_value__string(
 // 1. The value of n under p interpreted as a user-supplied preset (i.e. git config value delta.$p.$n)
 // 2. The value for n under p interpreted as a builtin preset
 // 3. The value for n in the main git config section for delta (i.e. git config value delta.$n)
+#[allow(non_snake_case)]
 fn get_option_value_for_preset__string(
     option_name: &str,
     preset: &str,

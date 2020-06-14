@@ -12,15 +12,14 @@ pub fn make_builtin_presets() -> HashMap<String, BuiltinPreset> {
     vec![
         (
             "diff-highlight".to_string(),
-            make_diff_highlight_preset().iter().map(|x| *x).collect(),
+            make_diff_highlight_preset().into_iter().collect(),
         ),
         (
             "diff-so-fancy".to_string(),
-            make_diff_so_fancy_preset().iter().map(|x| *x).collect(),
+            make_diff_so_fancy_preset().into_iter().collect(),
         ),
     ]
-    .iter()
-    .map(|x| *x)
+    .into_iter()
     .collect()
 }
 
