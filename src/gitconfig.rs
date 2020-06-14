@@ -8,6 +8,14 @@ use crate::preset::{self, GetValueFunctionFromBuiltinPreset};
 // sought, obeying delta's standard rules for looking up option values. It is implemented for T in
 // {String, bool, i64}.
 pub trait GetOptionValue {
+    // If the value for option name n was not supplied on the command line, then a search is performed
+    // as follows. The first value encountered is used:
+    //
+    // 1. For each preset p (moving right to left through the listed presets):
+    //    1.1 The value of n under p interpreted as a user-supplied preset (i.e. git config value
+    //        delta.$p.$n)
+    //    1.2 The value for n under p interpreted as a builtin preset
+    // 3. The value for n in the main git config section for delta (i.e. git config value delta.$n)
     fn get_option_value(
         option_name: &str,
         builtin_presets: &HashMap<String, preset::BuiltinPreset<String>>,
@@ -19,30 +27,33 @@ pub trait GetOptionValue {
         Self: GitConfigGet,
         Self: GetValueFunctionFromBuiltinPreset,
     {
-        match &opt.presets {
-            Some(presets) => {
-                for preset in presets.to_lowercase().split_whitespace().rev() {
-                    if let Some(value) = Self::get_option_value_for_preset(
-                        option_name,
-                        &preset,
-                        &builtin_presets,
-                        opt,
-                        git_config,
-                    ) {
-                        return Some(value);
-                    }
+        if let Some(presets) = &opt.presets {
+            for preset in presets.to_lowercase().split_whitespace().rev() {
+                if let Some(value) = Self::get_option_value_for_preset(
+                    option_name,
+                    &preset,
+                    &builtin_presets,
+                    opt,
+                    git_config,
+                ) {
+                    return Some(value);
                 }
-                None
             }
-            None => None,
         }
+        if let Some(git_config) = git_config {
+            let git_config = git_config.snapshot().unwrap_or_else(|err| {
+                eprintln!("Failed to read git config: {}", err);
+                process::exit(1)
+            });
+            if let Some(value) =
+                git_config_get::<Self>(&format!("delta.{}", option_name), git_config)
+            {
+                return Some(value);
+            }
+        }
+        None
     }
 
-    // If the value for option name n was not supplied on the command line, then a search is performed
-    // of the following locations in the order specified, and the first value encountered is used:
-    // 1. The value of n under p interpreted as a user-supplied preset (i.e. git config value delta.$p.$n)
-    // 2. The value for n under p interpreted as a builtin preset
-    // 3. The value for n in the main git config section for delta (i.e. git config value delta.$n)
     fn get_option_value_for_preset(
         option_name: &str,
         preset: &str,
@@ -71,17 +82,6 @@ pub trait GetOptionValue {
                 Self::get_value_function_from_builtin_preset(option_name, builtin_preset)
             {
                 return Some(value_function(opt, &git_config));
-            }
-        }
-        if let Some(git_config) = git_config {
-            let git_config = git_config.snapshot().unwrap_or_else(|err| {
-                eprintln!("Failed to read git config: {}", err);
-                process::exit(1)
-            });
-            if let Some(value) =
-                git_config_get::<Self>(&format!("delta.{}", option_name), git_config)
-            {
-                return Some(value);
             }
         }
         return None;
