@@ -152,6 +152,28 @@ pub mod tests {
     }
 
     #[test]
+    fn test_recursive_features() {
+        let git_config_contents = b"
+[delta]
+    features = feature-1
+
+[delta \"feature-1\"]
+    features = feature-2 feature-3
+
+[delta \"feature-2\"]
+    features = feature-4
+
+[delta \"feature-4\"]
+    minus-style = blue
+";
+        let git_config_path = "delta__test_recursive_features.gitconfig";
+        let opt = make_options(&["delta"], Some(git_config_contents), Some(git_config_path));
+        assert_eq!(opt.features, "feature-4 feature-2 feature-3 feature-1");
+
+        remove_file(git_config_path).unwrap();
+    }
+
+    #[test]
     fn test_main_section() {
         let git_config_contents = b"
 [delta]

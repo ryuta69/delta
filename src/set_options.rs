@@ -1,8 +1,6 @@
 use std::collections::HashMap;
-use std::collections::HashSet;
-use structopt::clap;
 
-use itertools::Itertools;
+use structopt::clap;
 
 use crate::cli;
 use crate::config;
@@ -115,21 +113,57 @@ fn set_features(
         opt.features = format!("{} navigate", opt.features);
     }
 
-    if let Some(more_features) =
+    println!("\n\n\n");
+
+    if let Some(features) =
         get_option_value::<String>("features", builtin_features, opt, git_config)
     {
-        opt.features = append_features(&opt.features, &more_features);
+        let features = format!("{} {}", opt.features, features);
+        if let Some(git_config) = git_config {
+            let mut collected_features = vec![];
+            collect_features_recursively(
+                features.split_whitespace().map(str::to_string).collect(),
+                &mut collected_features,
+                git_config,
+                0,
+            );
+            opt.features = collected_features.join(" ");
+        }
     }
+    println!("\n\n\n");
 }
 
-fn append_features(features: &str, more_features: &str) -> String {
-    let feature_set: HashSet<_> = features.split_whitespace().collect();
+fn collect_features_recursively(
+    features: Vec<String>,
+    collected_features: &mut Vec<String>,
+    git_config: &git_config::GitConfig,
+    stack: u8,
+) {
+    println!(
+        "collect_features_recursively: stack={}, features={:?}, collected_features={:?}",
+        stack, features, collected_features
+    );
+    for feature in features {
+        if let Some(child_features) =
+            git_config.get::<String>(&format!("delta.{}.features", feature))
+        {
+            println!("stack = {}, child_features={:?}", stack, child_features);
 
-    let more_features = more_features
-        .to_lowercase()
-        .split_whitespace()
-        .filter(|s| !feature_set.contains(s))
-        .join(" ");
-
-    [features, &more_features].join(" ")
+            for child_feature in child_features
+                .to_lowercase()
+                .split_whitespace()
+                .map(str::to_string)
+            {
+                if !collected_features.contains(&child_feature) {
+                    collect_features_recursively(
+                        vec![child_feature.clone()],
+                        collected_features,
+                        git_config,
+                        stack + 1,
+                    );
+                }
+            }
+        }
+        collected_features.push(feature);
+    }
 }
