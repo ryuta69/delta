@@ -226,9 +226,26 @@ where
 }
 
 fn show_syntax_themes() -> std::io::Result<()> {
+    let mut opt = cli::Opt::from_args();
+    let assets = HighlightingAssets::new();
+    opt.computed.syntax_set = assets.syntax_set;
+
+    if !opt.light {
+        let mut _opt = opt.clone();
+        _opt.computed.is_light_mode = false;
+        _show_syntax_themes(_opt)?;
+    }
+    if !opt.dark {
+        let mut _opt = opt.clone();
+        _opt.computed.is_light_mode = true;
+        _show_syntax_themes(_opt)?;
+    }
+    Ok(())
+}
+
+fn _show_syntax_themes(opt: cli::Opt) -> std::io::Result<()> {
     use bytelines::ByteLines;
     use std::io::BufReader;
-    let opt = cli::Opt::from_args();
     let input = if !atty::is(atty::Stream::Stdin) {
         let mut buf = Vec::new();
         io::stdin().lock().read_to_end(&mut buf)?;
@@ -253,34 +270,22 @@ index f38589a..0f1bb83 100644
         .to_vec()
     };
 
-    let stdout = io::stdout();
-    let mut stdout = stdout.lock();
-    let style = ansi_term::Style::new().bold();
-
+    let is_light_mode = opt.computed.is_light_mode;
+    let mut config = config::Config::from(opt);
+    let mut output_type = OutputType::from_mode(PagingMode::Never, None, &config).unwrap();
+    let mut writer = output_type.handle().unwrap();
+    let title_style = ansi_term::Style::new().bold();
     let assets = HighlightingAssets::new();
 
-    for (syntax_theme, _) in assets.theme_set.themes.iter() {
-        if opt.light && !syntax_theme::is_light_theme(syntax_theme)
-            || opt.dark && syntax_theme::is_light_theme(syntax_theme)
-        {
-            continue;
-        }
-
-        writeln!(stdout, "\n\nTheme: {}\n", style.paint(syntax_theme))?;
-
-        let opt_2 = cli::Opt::from_iter(&[
-            "--syntax-theme",
-            syntax_theme,
-            "--file-style",
-            "omit",
-            "--hunk-header-style",
-            "omit",
-        ]);
-        let config = config::Config::from(opt_2);
-        let mut output_type =
-            OutputType::from_mode(PagingMode::QuitIfOneScreen, None, &config).unwrap();
-        let mut writer = output_type.handle().unwrap();
-
+    for syntax_theme in assets
+        .theme_set
+        .themes
+        .iter()
+        .filter(|(t, _)| syntax_theme::is_light_theme(t) == is_light_mode)
+        .map(|(t, _)| t)
+    {
+        writeln!(writer, "\n\nTheme: {}\n", title_style.paint(syntax_theme))?;
+        config.syntax_theme = Some(assets.theme_set.themes[syntax_theme.as_str()].clone());
         if let Err(error) = delta(
             ByteLines::new(BufReader::new(&input[0..])),
             &mut writer,
