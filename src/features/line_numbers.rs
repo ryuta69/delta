@@ -134,13 +134,13 @@ fn format_and_paint_line_number_field<'a>(
         match &caps[1] {
             "nm" => ansi_strings.push(minus_number_style.paint(format_line_number(
                 minus_number,
-                &caps[3],
-                &caps[4],
+                caps.get(3).map(|m| m.as_str()),
+                caps.get(4).map(|m| m.as_str()),
             ))),
             "np" => ansi_strings.push(plus_number_style.paint(format_line_number(
                 plus_number,
-                &caps[3],
-                &caps[4],
+                caps.get(3).map(|m| m.as_str()),
+                caps.get(4).map(|m| m.as_str()),
             ))),
             _ => unreachable!(),
         }
@@ -151,17 +151,24 @@ fn format_and_paint_line_number_field<'a>(
 }
 
 /// Return line number formatted according to `alignment` and `width`.
-fn format_line_number(line_number: Option<usize>, alignment: &str, width: &str) -> String {
+fn format_line_number(
+    line_number: Option<usize>,
+    alignment: Option<&str>,
+    width: Option<&str>,
+) -> String {
     let n = line_number
         .map(|n| format!("{}", n))
         .unwrap_or_else(|| "".to_string());
-    let default_width = 4; // Used only if \d+ cannot be parsed as usize
-    let w: usize = width.parse().unwrap_or(default_width);
+    let default_width = 4;
+    let w: usize = match width {
+        Some(s) => s.parse().unwrap_or(default_width),
+        None => default_width,
+    };
     match alignment {
-        "<" => format!("{0:<1$}", n, w),
-        "^" | "" => format!("{0:^1$}", n, w),
-        ">" => format!("{0:>1$}", n, w),
-        _ => unreachable!(),
+        Some("<") => format!("{0:<1$}", n, w),
+        Some("^") => format!("{0:^1$}", n, w),
+        Some(">") => format!("{0:>1$}", n, w),
+        _ => format!("{0:1$}", n, w),
     }
 }
 
