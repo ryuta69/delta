@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::process;
 
@@ -25,6 +26,7 @@ pub struct Config {
     pub file_removed_label: String,
     pub file_renamed_label: String,
     pub file_style: Style,
+    pub git_config_colors: HashMap<String, Style>,
     pub keep_plus_minus_markers: bool,
     pub hunk_header_style: Style,
     pub max_buffered_lines: usize,
@@ -134,6 +136,7 @@ impl From<cli::Opt> for Config {
             file_removed_label: opt.file_removed_label,
             file_renamed_label: opt.file_renamed_label,
             file_style,
+            git_config_colors: opt.git_config_colors,
             keep_plus_minus_markers: opt.keep_plus_minus_markers,
             hunk_header_style,
             max_buffered_lines: 32,

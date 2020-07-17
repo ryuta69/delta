@@ -14,6 +14,7 @@ use crate::bat::assets::HighlightingAssets;
 use crate::bat::output::PagingMode;
 use crate::git_config::GitConfig;
 use crate::options;
+use crate::style::Style;
 
 #[derive(StructOpt, Clone, Default)]
 #[structopt(
@@ -517,6 +518,9 @@ pub struct Opt {
 
     #[structopt(skip)]
     pub computed: ComputedValues,
+
+    #[structopt(skip)]
+    pub git_config_colors: HashMap<String, Style>,
 }
 
 #[derive(Default, Clone, Debug)]

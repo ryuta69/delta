@@ -13,6 +13,7 @@ use crate::features;
 use crate::git_config;
 use crate::options::option_value::{OptionValue, ProvenancedOptionValue};
 use crate::options::theme;
+use crate::style::Style;
 
 macro_rules! set_options {
 	([$( $field_ident:ident ),* ],
@@ -68,6 +69,7 @@ pub fn set_options(
         if opt.no_gitconfig {
             git_config.enabled = false;
         }
+        set_git_config_colors(opt, git_config);
     }
 
     let option_names = cli::Opt::get_option_names();
@@ -491,6 +493,26 @@ fn set_widths(opt: &mut cli::Opt) {
     opt.computed.decorations_width = decorations_width;
     opt.computed.background_color_extends_to_terminal_width =
         background_color_extends_to_terminal_width;
+}
+
+fn set_git_config_colors(opt: &mut cli::Opt, git_config: &mut git_config::GitConfig) {
+    for key in &[
+        "color.diff.old",
+        "color.diff.new",
+        "color.diff.oldMoved",
+        "color.diff.newMoved",
+    ] {
+        if let Some(style_string) = git_config.get::<String>(key) {
+            opt.git_config_colors.insert(
+                key.to_string(),
+                Style::from_str(&style_string, None, None, opt.computed.true_color, false),
+            );
+        }
+    }
+    dbg!(opt.git_config_colors["color.diff.oldMoved"]
+        .ansi_term_style
+        .prefix()
+        .to_string());
 }
 
 #[cfg(test)]
