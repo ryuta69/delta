@@ -2,6 +2,7 @@ use std::borrow::Cow;
 use std::fmt;
 
 use ansi_term;
+use console::strip_ansi_codes;
 
 use crate::color;
 
@@ -83,6 +84,16 @@ impl Style {
             DecorationStyle::BoxWithUnderOverline(style) => Some(style),
             DecorationStyle::NoDecoration => None,
         }
+    }
+
+    pub fn is_applied_to(&self, s: &str) -> bool {
+        let is_applied = s.starts_with(&self.ansi_term_style.prefix().to_string());
+        println!("{}", s);
+        dbg!(&s);
+        dbg!(self.ansi_term_style.prefix().to_string());
+        println!("{}", self.paint(strip_ansi_codes(s)));
+        println!("{}", is_applied);
+        is_applied
     }
 
     pub fn to_painted_string(&self) -> ansi_term::ANSIGenericString<str> {
