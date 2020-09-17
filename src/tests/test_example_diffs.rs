@@ -841,7 +841,7 @@ src/align.rs
             "--commit-style",
             "omit",
             "--hunk-header-style",
-            "omit",
+            "normal",
             "--hunk-header-decoration-style",
             "omit",
         ]);
@@ -850,6 +850,9 @@ src/align.rs
         let output = strip_ansi_codes(&output);
         let output_lines: Vec<&str> = output.split('\n').collect();
         let input_lines: Vec<&str> = GIT_DIFF_SINGLE_HUNK.split('\n').collect();
+
+        println!("{}", GIT_DIFF_SINGLE_HUNK);
+        println!("{}", output);
 
         assert_eq!(input_lines.len(), output_lines.len());
 

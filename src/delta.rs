@@ -465,7 +465,7 @@ fn handle_hunk_header_line(
                 Some(false),
             );
             painter.output_buffer.pop(); // trim newline
-            if !painter.output_buffer.is_empty() {
+            // if !painter.output_buffer.is_empty() {
                 draw_fn(
                     painter.writer,
                     &painter.output_buffer,
@@ -474,7 +474,7 @@ fn handle_hunk_header_line(
                     config.hunk_header_style,
                     decoration_ansi_term_style,
                 )?;
-            }
+            // }
             painter.output_buffer.clear();
         }
     };
