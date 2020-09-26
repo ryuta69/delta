@@ -375,21 +375,26 @@ fn handle_hunk_header_line(
     plus_file: &str,
     config: &Config,
 ) -> std::io::Result<()> {
+    let mut pad = false;
     let decoration_ansi_term_style;
     let draw_fn = match config.hunk_header_style.decoration_style {
         DecorationStyle::Box(style) => {
+            pad = true;
             decoration_ansi_term_style = style;
             draw::write_boxed
         }
         DecorationStyle::BoxWithUnderline(style) => {
+            pad = true;
             decoration_ansi_term_style = style;
             draw::write_boxed_with_underline
         }
         DecorationStyle::BoxWithOverline(style) => {
+            pad = true;
             decoration_ansi_term_style = style;
             draw::write_boxed // TODO: not implemented
         }
         DecorationStyle::BoxWithUnderOverline(style) => {
+            pad = true;
             decoration_ansi_term_style = style;
             draw::write_boxed // TODO: not implemented
         }
@@ -418,8 +423,8 @@ fn handle_hunk_header_line(
         }
         draw_fn(
             painter.writer,
-            &format!("{} ", line),
-            &format!("{} ", raw_line),
+            &format!("{}{}", line, if pad { " " } else { "" }),
+            &format!("{}{}", raw_line, if pad { " " } else { "" }),
             &config.decorations_width,
             config.hunk_header_style,
             decoration_ansi_term_style,
